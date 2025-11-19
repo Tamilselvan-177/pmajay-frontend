@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import API from "../api.js";   // FIXED
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -32,7 +32,7 @@ const Login = () => {
         ? { username: formData.username, password: formData.password }
         : formData;
 
-      const { data } = await axios.post(endpoint, payload);
+      const { data } = await API.post(endpoint, payload);   // FIXED: using API
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.role);
@@ -59,7 +59,6 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 p-4">
       <div className="w-full max-w-md">
 
-        {/* Title Updated for PM AJAY */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">PM-AJAY Portal</h1>
           <p className="text-blue-100">
@@ -154,14 +153,6 @@ const Login = () => {
             </button>
           </div>
 
-          {/* <div className="mt-6 p-4 bg-white/10 rounded-lg border border-white/20">
-            <p className="text-xs text-blue-100 mb-2 font-semibold">Demo Credentials:</p>
-            <div className="space-y-1 text-xs text-blue-100">
-              <p>User: user123 / pass123</p>
-              <p>Admin: admin123 / pass123</p>
-              <p>SuperAdmin: super123 / pass123</p>
-            </div>
-          </div> */}
         </div>
       </div>
     </div>
