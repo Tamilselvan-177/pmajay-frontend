@@ -29,7 +29,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
-  const API_BASE = 'http://127.0.0.1:5000/api';
+  const API_BASE = 'https://backendpmajay.onrender.com/api';
 
   useEffect(() => {
     if (!isLogin) {
