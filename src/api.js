@@ -2,6 +2,7 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: "https://backendpmajay.onrender.com",
+  // baseURL: "http://localhost:5000",
 });
 
 // 🔥 Automatically attach token to all requests

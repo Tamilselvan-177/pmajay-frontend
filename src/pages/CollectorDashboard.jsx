@@ -1,24 +1,30 @@
 import React, { useState, useEffect } from "react";
 import api from "../api";
 import DocumentReviewModal from "./CollectorDocView";
+import { useNavigate } from "react-router-dom";
 
 import {
   FileText, CheckCircle, XCircle, Clock, Download, Eye, AlertCircle, IndianRupee,
-  Calendar, User, Building2, FileCheck, Search, Filter, ChevronDown, ChevronRight, Home
+  Calendar, User, Building2, FileCheck, Search, Filter, ChevronDown, ChevronRight, Home,
+  Award, Plus
 } from "lucide-react";
 
 const CollectorDashboard = () => {
   const [projects, setProjects] = useState([]);
   const [officers, setOfficers] = useState([]);
+  const [schemes, setSchemes] = useState([]);
   const [selectedOfficer, setSelectedOfficer] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [selectedScheme, setSelectedScheme] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [reviewNote, setReviewNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showSchemeModal, setShowSchemeModal] = useState(false);
   const [actionType, setActionType] = useState("");
   const [selectedDoc, setSelectedDoc] = useState(null);
+const navigate = useNavigate();
 
   // ================= API CALLS =================
   const fetchOfficers = async () => {
@@ -47,6 +53,15 @@ const CollectorDashboard = () => {
       console.error("Error fetching requests:", err);
     }
     setLoading(false);
+  };
+
+  const fetchSchemes = async () => {
+    try {
+      const res = await api.get("/api/projects/schemes");
+      setSchemes(res.data.schemes);
+    } catch (err) {
+      console.error("Failed to fetch schemes", err);
+    }
   };
 
   const handleApprove = async () => {
@@ -101,20 +116,42 @@ const CollectorDashboard = () => {
     }
   };
 
+  const handleAssignScheme = async () => {
+    try {
+      if (!selectedScheme) {
+        alert("⚠️ Please select a scheme!");
+        return;
+      }
+
+      await api.put(`/api/projects/assign-scheme/${selectedProject._id}`, {
+        schemeId: selectedScheme
+      });
+
+      alert("🎉 Scheme assigned successfully!");
+      setShowSchemeModal(false);
+      setSelectedScheme("");
+      await fetchProjects();
+    } catch (error) {
+      console.error("Failed to assign scheme", error);
+      alert("❌ Failed to assign scheme: " + (error.response?.data?.message || error.message));
+    }
+  };
+
   useEffect(() => {
     fetchOfficers();
     fetchProjects();
+    fetchSchemes();
   }, []);
 
   const filteredProjects = projects.filter((project) => {
-    const matchesStatus = filterStatus === "all" || project.status === filterStatus;
-    const matchesSearch =
-      project.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.village.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchesStatus = filterStatus === "all" || project.status === filterStatus;
+  const matchesSearch =
+    project.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (project.village?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase());
 
-    if (selectedOfficer) return matchesStatus && matchesSearch && project.requestedBy._id === selectedOfficer;
-    return matchesStatus && matchesSearch;
-  });
+  if (selectedOfficer) return matchesStatus && matchesSearch && project.requestedBy._id === selectedOfficer;
+  return matchesStatus && matchesSearch;
+});
 
   const getStatusBadge = (status) => {
     const config = {
@@ -238,16 +275,37 @@ const CollectorDashboard = () => {
                     </div>
                   </div>
 
-                  <p className="text-gray-600 mb-2">{project.village.name}</p>
+<p className="text-gray-600 mb-2">{project.village?.name || "Unknown Village"}</p>
                   <p className="font-bold text-lg mb-3">₹{project.budget?.toLocaleString()}</p>
                   
                   {/* Document Status Summary */}
-                  <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center gap-2 text-sm mb-2">
                     <FileCheck size={16} className="text-gray-500" />
                     <span className="text-gray-700">
                       Documents: <span className="font-semibold">{docsApproved}/{docsTotal}</span> approved
                     </span>
                   </div>
+
+                  {/* Scheme Status */}
+                  {project.assignedScheme && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Award size={16} className="text-green-600" />
+                      <span className="text-green-700 font-semibold">
+                        Scheme Assigned
+                      </span>
+                    </div>
+                  )}
+                  {/* View Work Packages */}
+<div className="mt-6 border-t pt-6">
+  <button
+    onClick={() => navigate(`/collector/work-packages/${selectedProject._id}`)}
+    className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2"
+  >
+    <FileText size={20} />
+    View Work Packages
+  </button>
+</div>
+
                 </div>
               );
             })
@@ -265,7 +323,7 @@ const CollectorDashboard = () => {
                 ← Close
               </button>
               <h1 className="text-2xl font-bold">{selectedProject.projectName}</h1>
-              <p className="text-blue-100 mt-1">{selectedProject.village.name}</p>
+<p className="text-blue-100 mt-1">{selectedProject.village?.name || "Unknown Village"}</p>
             </div>
 
             <div className="p-6">
@@ -396,6 +454,43 @@ const CollectorDashboard = () => {
                 </div>
               )}
 
+              {/* Assign Scheme Section */}
+              {selectedProject.status === "approved" && !selectedProject.assignedScheme && (
+                <div className="mt-6 border-t pt-6">
+                  <h3 className="font-bold mb-3 flex items-center gap-2">
+                    <Award className="text-blue-600" />
+                    Assign Scheme
+                  </h3>
+                  <button
+                    onClick={() => setShowSchemeModal(true)}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2"
+                  >
+                    <Plus size={20} />
+                    Assign Scheme to Project
+                  </button>
+                </div>
+              )}
+
+              {/* Display Assigned Scheme */}
+              {selectedProject.assignedScheme && (
+                <div className="mt-6 border-t pt-6">
+                  <div className="bg-green-50 border-2 border-green-300 p-4 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Award className="text-green-600" size={20} />
+                      <p className="text-sm font-semibold text-green-700">Scheme Assigned:</p>
+                    </div>
+                    <p className="text-lg font-bold text-green-900">
+                      {selectedProject.assignedScheme.schemeName}
+                    </p>
+                    {selectedProject.assignedScheme.description && (
+                      <p className="text-sm text-green-800 mt-2">
+                        {selectedProject.assignedScheme.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Show rejection reason if rejected */}
               {selectedProject.status === "rejected" && selectedProject.rejectionReason && (
                 <div className="border-t pt-6">
@@ -465,6 +560,55 @@ const CollectorDashboard = () => {
                   }`}
                 >
                   Confirm {actionType === "approve" ? "Approval" : "Rejection"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ASSIGN SCHEME MODAL */}
+        {showSchemeModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 w-[450px] rounded-xl shadow-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-blue-100 p-3 rounded-full">
+                  <Award className="text-blue-600" size={24} />
+                </div>
+                <h2 className="text-xl font-bold">Assign Scheme</h2>
+              </div>
+
+              <p className="text-gray-600 mb-4">
+                Select a government scheme to assign to this approved project:
+              </p>
+
+              <select
+                value={selectedScheme}
+                onChange={(e) => setSelectedScheme(e.target.value)}
+                className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">-- Select a Scheme --</option>
+                {schemes.map((scheme) => (
+                  <option key={scheme._id} value={scheme._id}>
+                    {scheme.schemeName}
+                  </option>
+                ))}
+              </select>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowSchemeModal(false);
+                    setSelectedScheme("");
+                  }}
+                  className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAssignScheme}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold"
+                >
+                  Assign Scheme
                 </button>
               </div>
             </div>

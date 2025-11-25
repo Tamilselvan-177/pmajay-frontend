@@ -10,6 +10,7 @@ import DocumentReview from './pages/DocumentReview';
 import ProjectsList from './pages/ProjectDetails';
 import VillageProjectDashboard from './pages/VillageProjectDashboard';
 import ProjectDetails from "./pages/ProjectDetails";
+import CollectorWorkPackages from "./pages/CollectorWorkPackages";
 
 function App() {
   return (
@@ -88,6 +89,8 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route path="/collector/work-packages/:projectId" element={<CollectorWorkPackages />} />
+
         <Route
           path="/collector/projects"
           element={

@@ -114,54 +114,70 @@ const ProjectRequestsDashboard = () => {
 };
 
 
-  const RequestCard = ({ request }) => (
-    <div
-onClick={() => navigate(`/officer/project/${request._id}/work-packages`)}
-      className="p-5 bg-white border-2 border-gray-200 hover:border-gray-900 transition-all rounded-lg cursor-pointer group"
-    >
-      <div className="flex justify-between items-start mb-3">
-        <h3 className="text-lg font-bold text-gray-900 group-hover:text-gray-700">
-          {request.projectName}
-        </h3>
-        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-900 transition" />
-      </div>
+const RequestCard = ({ request }) => (
+  <div
+    onClick={() => navigate(`/officer/project/${request._id}/work-packages`)}
+    className="p-5 bg-white border-2 border-gray-200 hover:border-gray-900 transition-all rounded-lg cursor-pointer group"
+  >
 
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-2 text-sm">
-          <FolderOpen className="w-4 h-4 text-gray-500" />
-          <span className="text-gray-700">{request.village.name}</span>
-        </div>
-
-        <div className="flex items-center gap-2 text-sm">
-          <FileText className="w-4 h-4 text-gray-500" />
-          <span className="text-gray-700">
-            {request.documents.length} Document{request.documents.length !== 1 ? "s" : ""}
-          </span>
-        </div>
-      </div>
-
-      <div className="pt-3 border-t border-gray-200">
-        <div className="flex justify-between items-center">
-          <span className="text-xs text-gray-500">Budget</span>
-          <span className="text-sm font-bold text-gray-900">
-            {formatBudget(request.budget)}
-          </span>
-        </div>
-        <div className="flex justify-between items-center mt-1">
-          <span className="text-xs text-gray-500">Submitted</span>
-          <span className="text-xs text-gray-600">
-            {formatDate(request.createdAt)}
-          </span>
-        </div>
-      </div>
-
-      {request.description && (
-        <p className="text-sm text-gray-600 mt-3 line-clamp-2">
-          {request.description}
-        </p>
-      )}
+    <div className="flex justify-between items-start mb-3">
+      <h3 className="text-lg font-bold text-gray-900 group-hover:text-gray-700">
+        {request.projectName}
+      </h3>
+      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-900 transition" />
     </div>
-  );
+
+    {/* Scheme Section */}
+    {request.assignedScheme ? (
+      <div className="mb-3 px-2 py-1 rounded-md bg-green-100 text-green-800 text-sm font-semibold">
+        Scheme: {request.assignedScheme.schemeName}
+      </div>
+    ) : (
+      <div className="mb-3 px-2 py-1 rounded-md bg-yellow-100 text-yellow-800 text-sm font-semibold">
+        Scheme Not Assigned Yet
+      </div>
+    )}
+
+    <div className="space-y-2 mb-4">
+      <div className="flex items-center gap-2 text-sm">
+        <FolderOpen className="w-4 h-4 text-gray-500" />
+        <span className="text-gray-700">
+          {request.village?.name || "Village removed"}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2 text-sm">
+        <FileText className="w-4 h-4 text-gray-500" />
+        <span className="text-gray-700">
+          {request.documents?.length || 0} Document
+          {request.documents?.length > 1 ? "s" : ""}
+        </span>
+      </div>
+    </div>
+
+    <div className="pt-3 border-t border-gray-200">
+      <div className="flex justify-between items-center">
+        <span className="text-xs text-gray-500">Budget</span>
+        <span className="text-sm font-bold text-gray-900">
+          {formatBudget(request.budget)}
+        </span>
+      </div>
+
+      <div className="flex justify-between items-center mt-1">
+        <span className="text-xs text-gray-500">Submitted</span>
+        <span className="text-xs text-gray-600">
+          {formatDate(request.createdAt)}
+        </span>
+      </div>
+    </div>
+
+    {request.description && (
+      <p className="text-sm text-gray-600 mt-3 line-clamp-2">
+        {request.description}
+      </p>
+    )}
+  </div>
+);
 
   return (
     <div className="min-h-screen bg-gray-50">
