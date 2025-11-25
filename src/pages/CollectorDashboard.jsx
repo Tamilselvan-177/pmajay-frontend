@@ -1,214 +1,478 @@
-import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import api from "../api";
+import DocumentReviewModal from "./CollectorDocView";
 
-const AdminDashboard = () => {
-  const navigate = useNavigate();
-  const username = localStorage.getItem('username');
-  const role = localStorage.getItem('role');
-  const [data, setData] = useState(null);
+import {
+  FileText, CheckCircle, XCircle, Clock, Download, Eye, AlertCircle, IndianRupee,
+  Calendar, User, Building2, FileCheck, Search, Filter, ChevronDown, ChevronRight, Home
+} from "lucide-react";
+
+const CollectorDashboard = () => {
+  const [projects, setProjects] = useState([]);
+  const [officers, setOfficers] = useState([]);
+  const [selectedOfficer, setSelectedOfficer] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [reviewNote, setReviewNote] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [actionType, setActionType] = useState("");
+  const [selectedDoc, setSelectedDoc] = useState(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  // ================= API CALLS =================
+  const fetchOfficers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/auth/admin', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setData(response.data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
+      const res = await api.get("/api/projects/collector/officers");
+      setOfficers(res.data.officers);
+    } catch (err) {
+      console.error("Error loading officers", err);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/login');
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get("/api/projects/collector/requests");
+      setProjects(res.data.requests);
+      
+      // If a project is selected, update it with fresh data
+      if (selectedProject) {
+        const updated = res.data.requests.find(p => p._id === selectedProject._id);
+        if (updated) {
+          setSelectedProject(updated);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching requests:", err);
+    }
+    setLoading(false);
   };
 
+  const handleApprove = async () => {
+    try {
+      // Check if all documents are approved
+      const allDocsApproved = selectedProject.documents.every(
+        doc => doc.status === "approved"
+      );
+
+      if (!allDocsApproved) {
+        alert("⚠️ Please approve all documents before approving the project!");
+        setShowApprovalModal(false);
+        return;
+      }
+
+      await api.put(`/api/projects/request/${selectedProject._id}/review`, {
+        decision: "approved",
+        reason: reviewNote
+      });
+
+      alert("✅ Project approved successfully!");
+      await fetchProjects();
+      setShowApprovalModal(false);
+      setReviewNote("");
+      setSelectedProject(null);
+    } catch (err) {
+      console.error("Approval failed", err);
+      alert("❌ Approval failed: " + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      if (!reviewNote.trim()) {
+        alert("⚠️ Please provide a rejection reason!");
+        return;
+      }
+
+      await api.put(`/api/projects/request/${selectedProject._id}/review`, {
+        decision: "rejected",
+        reason: reviewNote
+      });
+
+      alert("✅ Project rejected!");
+      await fetchProjects();
+      setShowApprovalModal(false);
+      setReviewNote("");
+      setSelectedProject(null);
+    } catch (err) {
+      console.error("Reject failed", err);
+      alert("❌ Rejection failed: " + (err.response?.data?.message || err.message));
+    }
+  };
+
+  useEffect(() => {
+    fetchOfficers();
+    fetchProjects();
+  }, []);
+
+  const filteredProjects = projects.filter((project) => {
+    const matchesStatus = filterStatus === "all" || project.status === filterStatus;
+    const matchesSearch =
+      project.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.village.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (selectedOfficer) return matchesStatus && matchesSearch && project.requestedBy._id === selectedOfficer;
+    return matchesStatus && matchesSearch;
+  });
+
+  const getStatusBadge = (status) => {
+    const config = {
+      pending: { bg: "bg-yellow-100", text: "text-yellow-800", icon: Clock, label: "Pending" },
+      approved: { bg: "bg-green-100", text: "text-green-800", icon: CheckCircle, label: "Approved" },
+      rejected: { bg: "bg-red-100", text: "text-red-800", icon: XCircle, label: "Rejected" }
+    };
+    return config[status] || config.pending;
+  };
+
+  const getDocStatusBadge = (status) => {
+    const config = {
+      pending: { bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-300", icon: Clock, label: "Pending Review" },
+      approved: { bg: "bg-green-50", text: "text-green-700", border: "border-green-300", icon: CheckCircle, label: "Approved" },
+      rejected: { bg: "bg-red-50", text: "text-red-700", border: "border-red-300", icon: XCircle, label: "Rejected" }
+    };
+    return config[status] || config.pending;
+  };
+
+  if (loading)
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
+      </div>
+    );
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600">
-      {/* Navigation */}
-      <nav className="bg-white/10 backdrop-blur-md border-b border-white/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-white text-xl font-bold">Admin Dashboard</h1>
+    <div className="flex h-screen bg-gray-100">
+      {/* SIDEBAR */}
+      <div className="w-80 bg-white border-r shadow-md p-5 overflow-y-auto">
+        <h2 className="text-2xl font-bold mb-5 flex items-center gap-2">
+          <Building2 className="text-blue-600" /> Collector Panel
+        </h2>
+
+        <div className="mb-4">
+          <button
+            onClick={() => setSelectedOfficer(null)}
+            className={`w-full p-3 rounded-lg mb-2 font-semibold ${
+              !selectedOfficer ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            All Officers
+          </button>
+        </div>
+
+        <h3 className="font-semibold text-gray-700 mb-3">Villages & Officers</h3>
+
+        {officers.map((off) => (
+          <button
+            key={off._id}
+            onClick={() => setSelectedOfficer(off._id)}
+            className={`w-full flex items-center justify-between p-3 rounded-lg border mb-2 ${
+              selectedOfficer === off._id ? "bg-blue-50 border-blue-600" : "hover:bg-gray-50 border-gray-300"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Home className="text-blue-700" />
+              <div className="text-left">
+                <p className="font-bold">{off.fullName}</p>
+                <p className="text-sm text-gray-600">{off.village?.name}</p>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-white text-sm">
-                Welcome, <span className="font-semibold">{username}</span>
-              </span>
-              <span className="px-3 py-1 bg-purple-500 text-white text-xs rounded-full font-medium">
-                {role}
-              </span>
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition"
+            <ChevronRight />
+          </button>
+        ))}
+      </div>
+
+      {/* MAIN CONTENT */}
+      <div className="flex-1 p-8 overflow-auto">
+        <h1 className="text-3xl font-bold mb-4">Project Requests</h1>
+
+        {/* Search + Filter */}
+        <div className="flex gap-4 mb-6">
+          <input
+            type="text"
+            placeholder="Search project or village..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 px-4 py-3 rounded-lg border"
+          />
+
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-4 py-3 rounded-lg border"
+          >
+            <option value="all">All</option>
+            <option value="pending">Pending Review</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+
+        {/* PROJECT CARDS */}
+        <div className="grid grid-cols-2 gap-6">
+          {filteredProjects.length === 0 ? (
+            <div className="col-span-2 text-center py-12">
+              <p className="text-gray-500 text-lg">No projects found</p>
+            </div>
+          ) : (
+            filteredProjects.map((project) => {
+              const badge = getStatusBadge(project.status);
+              const BadgeIcon = badge.icon;
+              
+              // Count document statuses
+              const docsApproved = project.documents.filter(d => d.status === "approved").length;
+              const docsTotal = project.documents.length;
+              
+              return (
+                <div
+                  key={project._id}
+                  onClick={() => setSelectedProject(project)}
+                  className={`bg-white p-6 border-2 rounded-xl shadow-sm hover:shadow-xl cursor-pointer transition ${
+                    selectedProject?._id === project._id ? "border-blue-500" : "border-gray-200"
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <h2 className="text-xl font-bold">{project.projectName}</h2>
+                    <div className={`px-3 py-1 rounded-full text-xs flex items-center gap-1 ${badge.bg} ${badge.text}`}>
+                      <BadgeIcon size={14} /> {badge.label}
+                    </div>
+                  </div>
+
+                  <p className="text-gray-600 mb-2">{project.village.name}</p>
+                  <p className="font-bold text-lg mb-3">₹{project.budget?.toLocaleString()}</p>
+                  
+                  {/* Document Status Summary */}
+                  <div className="flex items-center gap-2 text-sm">
+                    <FileCheck size={16} className="text-gray-500" />
+                    <span className="text-gray-700">
+                      Documents: <span className="font-semibold">{docsApproved}/{docsTotal}</span> approved
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* PROJECT DETAILS PANEL */}
+        {selectedProject && (
+          <div className="fixed right-0 top-0 w-[520px] h-full bg-white shadow-2xl overflow-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 z-10">
+              <button 
+                onClick={() => setSelectedProject(null)} 
+                className="text-white font-bold mb-4 hover:underline"
               >
-                Logout
+                ← Close
               </button>
+              <h1 className="text-2xl font-bold">{selectedProject.projectName}</h1>
+              <p className="text-blue-100 mt-1">{selectedProject.village.name}</p>
             </div>
-          </div>
-        </div>
-      </nav>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Card */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20 mb-8">
-          <h2 className="text-3xl font-bold text-white mb-2">Admin Control Panel</h2>
-          <p className="text-purple-100">Manage users, settings, and system configurations.</p>
-        </div>
+            <div className="p-6">
+              {/* Project Info */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold mb-1">BUDGET</p>
+                    <p className="font-bold text-lg">₹{selectedProject.budget?.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold mb-1">STATUS</p>
+                    {(() => {
+                      const badge = getStatusBadge(selectedProject.status);
+                      const Icon = badge.icon;
+                      return (
+                        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded ${badge.bg} ${badge.text}`}>
+                          <Icon size={14} />
+                          <span className="text-sm font-semibold">{badge.label}</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+                
+                {selectedProject.description && (
+                  <div className="mt-4">
+                    <p className="text-xs text-gray-500 font-semibold mb-1">DESCRIPTION</p>
+                    <p className="text-sm text-gray-700">{selectedProject.description}</p>
+                  </div>
+                )}
+              </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-sm font-medium">Total Users</p>
-                <p className="text-3xl font-bold text-white mt-2">1,234</p>
-              </div>
-              <div className="bg-blue-500 p-3 rounded-lg">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </div>
-            </div>
-            <div className="mt-4">
-              <span className="text-green-300 text-sm">↑ 12% from last month</span>
-            </div>
-          </div>
+              {/* Documents Section */}
+              <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                <FileCheck className="text-blue-600" />
+                Documents ({selectedProject.documents.length})
+              </h3>
+              
+              {selectedProject.documents.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                  <FileText className="mx-auto text-gray-400 mb-2" size={32} />
+                  <p className="text-gray-500">No documents uploaded</p>
+                </div>
+              ) : (
+                <div className="space-y-3 mb-6">
+                  {selectedProject.documents.map((doc) => {
+                    const docBadge = getDocStatusBadge(doc.status);
+                    const DocIcon = docBadge.icon;
+                    
+                    return (
+                      <div 
+                        key={doc._id} 
+                        className={`p-4 bg-white border-2 ${docBadge.border} rounded-lg hover:shadow-md transition`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-3 flex-1">
+                            <div className="bg-blue-100 p-2 rounded">
+                              <FileText className="text-blue-600" size={18} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-gray-900 truncate">{doc.fileName}</p>
+                              <p className="text-xs text-gray-500">{doc.documentType}</p>
+                            </div>
+                          </div>
+                          
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${docBadge.bg} ${docBadge.text}`}>
+                            <DocIcon size={12} />
+                            {docBadge.label}
+                          </div>
+                        </div>
+                        
+                        {doc.reviewComments && (
+                          <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                            <p className="font-semibold text-gray-700">Review Note:</p>
+                            <p className="text-gray-600">{doc.reviewComments}</p>
+                          </div>
+                        )}
+                        
+                        <button 
+                          className="mt-3 w-full text-blue-600 hover:bg-blue-50 py-2 rounded font-medium text-sm border border-blue-300"
+                          onClick={() => setSelectedDoc(doc)}
+                        >
+                          Review Document
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-sm font-medium">Active Sessions</p>
-                <p className="text-3xl font-bold text-white mt-2">856</p>
-              </div>
-              <div className="bg-green-500 p-3 rounded-lg">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-            <div className="mt-4">
-              <span className="text-green-300 text-sm">↑ 8% from yesterday</span>
-            </div>
-          </div>
+              {/* Approval Section */}
+              {selectedProject.status === "pending" && (
+                <div className="border-t pt-6">
+                  <h3 className="font-bold mb-3">Final Decision</h3>
+                  
+                  <textarea
+                    value={reviewNote}
+                    onChange={(e) => setReviewNote(e.target.value)}
+                    placeholder="Enter your decision note (required for rejection)..."
+                    className="w-full p-3 border rounded-lg mb-4 resize-none"
+                    rows="4"
+                  />
 
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-sm font-medium">Pending Approvals</p>
-                <p className="text-3xl font-bold text-white mt-2">23</p>
-              </div>
-              <div className="bg-yellow-500 p-3 rounded-lg">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-            <div className="mt-4">
-              <span className="text-yellow-300 text-sm">Requires attention</span>
-            </div>
-          </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setShowApprovalModal(true);
+                        setActionType("approve");
+                      }}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg font-bold flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle size={20} />
+                      Approve Project
+                    </button>
 
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-sm font-medium">System Health</p>
-                <p className="text-3xl font-bold text-white mt-2">98%</p>
-              </div>
-              <div className="bg-purple-500 p-3 rounded-lg">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-            </div>
-            <div className="mt-4">
-              <span className="text-green-300 text-sm">All systems operational</span>
-            </div>
-          </div>
-        </div>
+                    <button
+                      onClick={() => {
+                        setShowApprovalModal(true);
+                        setActionType("reject");
+                      }}
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg font-bold flex items-center justify-center gap-2"
+                    >
+                      <XCircle size={20} />
+                      Reject Project
+                    </button>
+                  </div>
+                </div>
+              )}
 
-        {/* API Response */}
-        {loading ? (
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-8 border border-white/20 text-center">
-            <p className="text-white">Loading...</p>
-          </div>
-        ) : (
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 mb-8">
-            <h3 className="text-xl font-bold text-white mb-4">API Response</h3>
-            <pre className="bg-black/30 p-4 rounded-lg text-green-300 text-sm overflow-x-auto">
-              {JSON.stringify(data, null, 2)}
-            </pre>
+              {/* Show rejection reason if rejected */}
+              {selectedProject.status === "rejected" && selectedProject.rejectionReason && (
+                <div className="border-t pt-6">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="text-red-600 mt-0.5" size={18} />
+                      <div>
+                        <p className="font-bold text-red-900 mb-1">Rejection Reason:</p>
+                        <p className="text-red-800 text-sm">{selectedProject.rejectionReason}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Management Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* User Management */}
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
-            <h3 className="text-xl font-bold text-white mb-4">User Management</h3>
-            <div className="space-y-3">
-              {[
-                { name: 'John Doe', email: 'john@example.com', status: 'Active' },
-                { name: 'Jane Smith', email: 'jane@example.com', status: 'Active' },
-                { name: 'Bob Johnson', email: 'bob@example.com', status: 'Pending' },
-                { name: 'Alice Brown', email: 'alice@example.com', status: 'Active' },
-              ].map((user, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                  <div>
-                    <p className="text-white text-sm font-medium">{user.name}</p>
-                    <p className="text-purple-200 text-xs">{user.email}</p>
-                  </div>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    user.status === 'Active' ? 'bg-green-500/30 text-green-200' : 'bg-yellow-500/30 text-yellow-200'
-                  }`}>
-                    {user.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <button className="w-full mt-4 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium transition">
-              View All Users
-            </button>
-          </div>
+        {/* REVIEW MODAL */}
+        {selectedDoc && (
+          <DocumentReviewModal
+            doc={selectedDoc}
+            close={() => setSelectedDoc(null)}
+            refresh={fetchProjects}
+          />
+        )}
 
-          {/* System Logs */}
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
-            <h3 className="text-xl font-bold text-white mb-4">Recent System Logs</h3>
-            <div className="space-y-3">
-              {[
-                { event: 'User login', user: 'john@example.com', time: '5 min ago' },
-                { event: 'Role updated', user: 'admin@example.com', time: '15 min ago' },
-                { event: 'New user registered', user: 'newuser@example.com', time: '1 hour ago' },
-                { event: 'Password reset', user: 'jane@example.com', time: '2 hours ago' },
-              ].map((log, index) => (
-                <div key={index} className="p-3 bg-white/5 rounded-lg">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-white text-sm font-medium">{log.event}</p>
-                    <span className="text-purple-200 text-xs">{log.time}</span>
+        {/* APPROVE / REJECT CONFIRM MODAL */}
+        {showApprovalModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 w-[420px] rounded-xl shadow-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                {actionType === "approve" ? (
+                  <div className="bg-green-100 p-3 rounded-full">
+                    <CheckCircle className="text-green-600" size={24} />
                   </div>
-                  <p className="text-purple-200 text-xs">{log.user}</p>
-                </div>
-              ))}
+                ) : (
+                  <div className="bg-red-100 p-3 rounded-full">
+                    <XCircle className="text-red-600" size={24} />
+                  </div>
+                )}
+                <h2 className="text-xl font-bold">
+                  Confirm {actionType === "approve" ? "Approval" : "Rejection"}
+                </h2>
+              </div>
+
+              <p className="text-gray-600 mb-4">
+                {actionType === "approve" 
+                  ? "Are you sure you want to approve this project? This action will create a new project in the system."
+                  : "Are you sure you want to reject this project? Please ensure you have provided a rejection reason."}
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowApprovalModal(false)}
+                  className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                
+                <button
+                  onClick={actionType === "approve" ? handleApprove : handleReject}
+                  className={`flex-1 text-white py-3 rounded-lg font-bold ${
+                    actionType === "approve"
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "bg-red-600 hover:bg-red-700"
+                  }`}
+                >
+                  Confirm {actionType === "approve" ? "Approval" : "Rejection"}
+                </button>
+              </div>
             </div>
-            <button className="w-full mt-4 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-medium transition">
-              View All Logs
-            </button>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
 };
 
-export default AdminDashboard;
+export default CollectorDashboard;

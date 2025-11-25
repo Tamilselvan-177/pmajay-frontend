@@ -128,7 +128,7 @@ const WorkPackageDashboard = () => {
                 <div key={doc._id} className="bg-gray-50 p-3 flex justify-between rounded">
                   <div className="flex items-center gap-3">
                     <FileText className="w-5 h-5 text-gray-600" />
-                    <a href={`http://localhost:5000${doc.fileUrl}`} target="_blank" className="text-blue-600 underline">
+                    <a href={doc.fileUrl} target="_blank" className="text-blue-600 underline">
                       {doc.fileName}
                     </a>
                   </div>
@@ -137,7 +137,6 @@ const WorkPackageDashboard = () => {
               ))}
             </div>
 
-            {/* Upload additional document button */}
             <button
               className="mt-4 flex items-center gap-2 text-blue-700 underline"
               onClick={() => {
@@ -189,6 +188,66 @@ const WorkPackageDashboard = () => {
                   className="flex-1 bg-blue-600 text-white py-2 rounded"
                 >
                   Upload
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Work Package Modal */}
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center p-6 z-50">
+          <div className="bg-white p-6 rounded-xl w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Create New Work Package</h2>
+
+            <form onSubmit={handleCreatePackage} className="space-y-4">
+              <input
+                type="text"
+                placeholder="Package Title"
+                className="border w-full p-2 rounded"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                required
+              />
+
+              <input
+                type="number"
+                placeholder="Amount (₹)"
+                className="border w-full p-2 rounded"
+                value={formData.amount}
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                required
+              />
+
+              <select
+                className="border w-full p-2 rounded"
+                value={formData.documentType}
+                onChange={(e) => setFormData({ ...formData, documentType: e.target.value })}
+              >
+                <option value="bill">Bill</option>
+                <option value="invoice">Invoice</option>
+                <option value="material">Material</option>
+              </select>
+
+              <input
+                type="file"
+                accept=".pdf,.jpg,.png"
+                className="border w-full p-2 rounded"
+                onChange={(e) => setFile(e.target.files[0])}
+                required
+              />
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  className="flex-1 border py-2 rounded"
+                  onClick={() => setShowCreateForm(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="flex-1 bg-green-600 text-white py-2 rounded">
+                  Create
                 </button>
               </div>
             </form>
