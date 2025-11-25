@@ -7,7 +7,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'https://walking-format-predictions-aids.trycloudflare.com/',
+        target: 'https://backendpmajay.onrender.com/',
         changeOrigin: true,
         secure: false,
       },
