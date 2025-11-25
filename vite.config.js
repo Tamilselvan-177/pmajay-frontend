@@ -6,11 +6,11 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-        secure: false,
-      },
+      // '/api': {
+      //   target: 'https://6d730a734f5c.ngrok-free.app',
+      //   changeOrigin: true,
+      //   secure: false,
+     // },
     },
   },
 });

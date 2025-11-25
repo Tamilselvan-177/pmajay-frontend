@@ -35,7 +35,9 @@ const ProjectRequestsDashboard = () => {
       const res = await api.get("/api/projects/my-requests");
       setRequests(res.data.requests || []);
     } catch (err) {
+      // More detailed logging to help debug ngrok/CORS/auth failures
       console.error("Error loading requests:", err);
+      console.error("Error status:", err.response?.status, "response data:", err.response?.data);
     } finally {
       setLoading(false);
     }
@@ -89,9 +91,8 @@ const ProjectRequestsDashboard = () => {
       formDataToSend.append("documents", file);
     });
 
-    const res = await api.post("/api/projects/request", formDataToSend, {
-      headers: { "Content-Type": "multipart/form-data" }
-    });
+    // Let the browser set the Content-Type (including the multipart boundary)
+    const res = await api.post("/api/projects/request", formDataToSend);
 
     if (res.data.success) {
       alert("Project request created successfully!");

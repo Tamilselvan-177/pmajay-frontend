@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:5000",
+  baseURL: "https://walking-format-predictions-aids.trycloudflare.com/",
 });
 
 // 🔥 Automatically attach token to all requests
