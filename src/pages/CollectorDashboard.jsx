@@ -1,12 +1,11 @@
+// src/pages/CollectorDashboard.jsx - ✅ PROPER JSX ALIGNMENT FIXED
 import React, { useState, useEffect } from "react";
 import api from "../api";
 import DocumentReviewModal from "./CollectorDocView";
-import { useNavigate } from "react-router-dom";
-
+import { useNavigate, NavLink } from "react-router-dom";
 import {
-  FileText, CheckCircle, XCircle, Clock, Download, Eye, AlertCircle, IndianRupee,
-  Calendar, User, Building2, FileCheck, Search, Filter, ChevronDown, ChevronRight, Home,
-  Award, Plus
+  FileText, CheckCircle, XCircle, Clock, FileCheck, Building2, Home,
+  Award, Plus, ChevronRight, AlertCircle, ShieldCheck, MapPin, Filter, Search, X
 } from "lucide-react";
 
 const CollectorDashboard = () => {
@@ -15,7 +14,6 @@ const CollectorDashboard = () => {
   const [schemes, setSchemes] = useState([]);
   const [selectedOfficer, setSelectedOfficer] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
-  const [selectedScheme, setSelectedScheme] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [reviewNote, setReviewNote] = useState("");
@@ -24,13 +22,14 @@ const CollectorDashboard = () => {
   const [showSchemeModal, setShowSchemeModal] = useState(false);
   const [actionType, setActionType] = useState("");
   const [selectedDoc, setSelectedDoc] = useState(null);
-const navigate = useNavigate();
+  const [schemeFilters, setSchemeFilters] = useState({ category: "", budget: "" });
+  const [schemeSearch, setSchemeSearch] = useState("");
+  const navigate = useNavigate();
 
-  // ================= API CALLS =================
   const fetchOfficers = async () => {
     try {
       const res = await api.get("/api/projects/collector/officers");
-      setOfficers(res.data.officers);
+      setOfficers(res.data.officers || []);
     } catch (err) {
       console.error("Error loading officers", err);
     }
@@ -40,39 +39,60 @@ const navigate = useNavigate();
     try {
       setLoading(true);
       const res = await api.get("/api/projects/collector/requests");
-      setProjects(res.data.requests);
-      
-      // If a project is selected, update it with fresh data
+      setProjects(res.data.requests || []);
       if (selectedProject) {
         const updated = res.data.requests.find(p => p._id === selectedProject._id);
-        if (updated) {
-          setSelectedProject(updated);
-        }
+        if (updated) setSelectedProject(updated);
       }
     } catch (err) {
       console.error("Error fetching requests:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const fetchSchemes = async () => {
+  const fetchFilteredSchemes = async (category = "", budget = "") => {
     try {
-      const res = await api.get("/api/projects/schemes");
-      setSchemes(res.data.schemes);
+      const params = new URLSearchParams();
+      if (category) params.append("category", category);
+      if (budget) params.append("budget", budget);
+      const res = await api.get(`/api/projects/schemes/filtered?${params}`);
+      setSchemes(res.data.schemes || []);
     } catch (err) {
-      console.error("Failed to fetch schemes", err);
+      console.error("Error loading schemes:", err);
+      setSchemes([]);
+    }
+  };
+
+  const handleCollectorSchemeAction = async (action, schemeId = null) => {
+    try {
+      setLoading(true);
+      const payload = { action };
+      if (schemeId) payload.schemeId = schemeId;
+
+      const res = await api.put(`/api/projects/collector/request/${selectedProject._id}/scheme`, payload);
+      
+      if (res.data.success) {
+        alert(`✅ ${res.data.message}`);
+        setShowSchemeModal(false);
+        setSchemeFilters({ category: "", budget: "" });
+        setSchemeSearch("");
+        await fetchProjects();
+      }
+    } catch (err) {
+      console.error("Scheme action failed:", err);
+      const errorMsg = err.response?.data?.message || "Scheme action failed";
+      alert(`❌ ${errorMsg}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleApprove = async () => {
     try {
-      // Check if all documents are approved
-      const allDocsApproved = selectedProject.documents.every(
-        doc => doc.status === "approved"
-      );
-
+      const allDocsApproved = selectedProject.documents.every(doc => doc.status === "approved");
       if (!allDocsApproved) {
-        alert("⚠️ Please approve all documents before approving the project!");
+        alert("Please approve all documents before approving the project.");
         setShowApprovalModal(false);
         return;
       }
@@ -83,20 +103,19 @@ const navigate = useNavigate();
       });
 
       alert("✅ Project approved successfully!");
-      await fetchProjects();
       setShowApprovalModal(false);
       setReviewNote("");
       setSelectedProject(null);
+      await fetchProjects();
     } catch (err) {
-      console.error("Approval failed", err);
-      alert("❌ Approval failed: " + (err.response?.data?.message || err.message));
+      alert("❌ " + (err.response?.data?.message || "Approval failed"));
     }
   };
 
   const handleReject = async () => {
     try {
       if (!reviewNote.trim()) {
-        alert("⚠️ Please provide a rejection reason!");
+        alert("Please provide a rejection reason.");
         return;
       }
 
@@ -105,515 +124,704 @@ const navigate = useNavigate();
         reason: reviewNote
       });
 
-      alert("✅ Project rejected!");
-      await fetchProjects();
+      alert("✅ Project rejected.");
       setShowApprovalModal(false);
       setReviewNote("");
       setSelectedProject(null);
-    } catch (err) {
-      console.error("Reject failed", err);
-      alert("❌ Rejection failed: " + (err.response?.data?.message || err.message));
-    }
-  };
-
-  const handleAssignScheme = async () => {
-    try {
-      if (!selectedScheme) {
-        alert("⚠️ Please select a scheme!");
-        return;
-      }
-
-      await api.put(`/api/projects/assign-scheme/${selectedProject._id}`, {
-        schemeId: selectedScheme
-      });
-
-      alert("🎉 Scheme assigned successfully!");
-      setShowSchemeModal(false);
-      setSelectedScheme("");
       await fetchProjects();
-    } catch (error) {
-      console.error("Failed to assign scheme", error);
-      alert("❌ Failed to assign scheme: " + (error.response?.data?.message || error.message));
+    } catch (err) {
+      alert("❌ " + (err.response?.data?.message || "Rejection failed"));
     }
   };
 
   useEffect(() => {
     fetchOfficers();
     fetchProjects();
-    fetchSchemes();
+    fetchFilteredSchemes();
   }, []);
 
   const filteredProjects = projects.filter((project) => {
-  const matchesStatus = filterStatus === "all" || project.status === filterStatus;
-  const matchesSearch =
-    project.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (project.village?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === "all" || project.status === filterStatus;
+    const matchesSearch =
+      project.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (project.village?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+    if (selectedOfficer) {
+      return matchesStatus && matchesSearch && project.requestedBy._id === selectedOfficer;
+    }
+    return matchesStatus && matchesSearch;
+  });
 
-  if (selectedOfficer) return matchesStatus && matchesSearch && project.requestedBy._id === selectedOfficer;
-  return matchesStatus && matchesSearch;
-});
+  const filteredSchemes = schemes.filter(scheme =>
+    scheme.schemeName.toLowerCase().includes(schemeSearch.toLowerCase())
+  );
 
   const getStatusBadge = (status) => {
     const config = {
-      pending: { bg: "bg-yellow-100", text: "text-yellow-800", icon: Clock, label: "Pending" },
+      pending: { bg: "bg-gray-200", text: "text-gray-800", icon: Clock, label: "Pending" },
       approved: { bg: "bg-green-100", text: "text-green-800", icon: CheckCircle, label: "Approved" },
       rejected: { bg: "bg-red-100", text: "text-red-800", icon: XCircle, label: "Rejected" }
     };
     return config[status] || config.pending;
   };
 
-  const getDocStatusBadge = (status) => {
-    const config = {
-      pending: { bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-300", icon: Clock, label: "Pending Review" },
-      approved: { bg: "bg-green-50", text: "text-green-700", border: "border-green-300", icon: CheckCircle, label: "Approved" },
-      rejected: { bg: "bg-red-50", text: "text-red-700", border: "border-red-300", icon: XCircle, label: "Rejected" }
-    };
-    return config[status] || config.pending;
-  };
+  const categories = [
+    { value: "health", label: "🏥 Health/Hospital" },
+    { value: "road", label: "🛣️ Road/Infrastructure" },
+    { value: "water", label: "💧 Water/Jal Jeevan" },
+    { value: "education", label: "📚 Education/School" },
+    { value: "housing", label: "🏠 Housing/Awas" },
+    { value: "agriculture", label: "🌾 Agriculture/Farming" },
+    { value: "sanitation", label: "🚽 Sanitation/Swachh" },
+    { value: "employment", label: "💼 Employment/MGNREGA" },
+    { value: "electricity", label: "⚡ Electricity/Solar" },
+    { value: "women", label: "♀️ Women Welfare" },
+    { value: "sports", label: "⚽ Sports/Stadium" }
+  ];
 
-  if (loading)
+  if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
+      <div className="h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-black"></div>
       </div>
     );
+  }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-white text-black">
       {/* SIDEBAR */}
-      <div className="w-80 bg-white border-r shadow-md p-5 overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-5 flex items-center gap-2">
-          <Building2 className="text-blue-600" /> Collector Panel
+      <div className="w-80 bg-white border-r border-gray-300 shadow-sm p-5 overflow-y-auto">
+        <h2 className="text-2xl font-bold mb-5 flex items-center gap-2 text-black">
+          <Building2 className="text-black" />
+          Collector Panel
         </h2>
+
+        <div className="space-y-2 mb-6">
+          <NavLink
+            to="/collector"
+            className={({ isActive }) =>
+              `w-full block p-3 rounded-lg font-semibold flex items-center gap-2 transition ${
+                isActive ? "bg-black text-white shadow-md" : "text-black hover:bg-gray-100"
+              }`
+            }
+            end
+          >
+            <FileText size={18} />
+            Project Requests
+          </NavLink>
+          <NavLink
+            to="/collector/verification"
+            className={({ isActive }) =>
+              `w-full block p-3 rounded-lg font-semibold flex items-center gap-2 transition ${
+                isActive ? "bg-black text-white shadow-md" : "text-black hover:bg-gray-100"
+              }`
+            }
+          >
+            <ShieldCheck size={18} />
+            Verification
+          </NavLink>
+          <NavLink
+            to="/collector/verification/map"
+            className={({ isActive }) =>
+              `w-full block p-3 rounded-lg font-semibold flex items-center gap-2 transition ${
+                isActive ? "bg-black text-white shadow-md" : "text-black hover:bg-gray-100"
+              }`
+            }
+          >
+            <MapPin size={18} />
+            District Map
+          </NavLink>
+        </div>
 
         <div className="mb-4">
           <button
             onClick={() => setSelectedOfficer(null)}
             className={`w-full p-3 rounded-lg mb-2 font-semibold ${
-              !selectedOfficer ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
+              !selectedOfficer ? "bg-black text-white" : "bg-gray-100 text-black"
             }`}
           >
             All Officers
           </button>
         </div>
 
-        <h3 className="font-semibold text-gray-700 mb-3">Villages & Officers</h3>
-
+        <h3 className="font-semibold text-black mb-3">Villages & Officers</h3>
         {officers.map((off) => (
           <button
             key={off._id}
             onClick={() => setSelectedOfficer(off._id)}
             className={`w-full flex items-center justify-between p-3 rounded-lg border mb-2 ${
-              selectedOfficer === off._id ? "bg-blue-50 border-blue-600" : "hover:bg-gray-50 border-gray-300"
+              selectedOfficer === off._id ? "bg-gray-100 border-black" : "hover:bg-gray-50 border-gray-300"
             }`}
           >
             <div className="flex items-center gap-3">
-              <Home className="text-blue-700" />
-              <div className="text-left">
-                <p className="font-bold">{off.fullName}</p>
-                <p className="text-sm text-gray-600">{off.village?.name}</p>
+              <Home className="text-black" />
+              <div>
+                <p className="font-bold text-black">{off.fullName}</p>
+                <p className="text-sm text-gray-700">{off.village?.name}</p>
               </div>
             </div>
-            <ChevronRight />
+            <ChevronRight className="text-black" />
           </button>
         ))}
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="flex-1 p-8 overflow-auto">
-        <h1 className="text-3xl font-bold mb-4">Project Requests</h1>
-
-        {/* Search + Filter */}
-        <div className="flex gap-4 mb-6">
-          <input
-            type="text"
-            placeholder="Search project or village..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 px-4 py-3 rounded-lg border"
-          />
-
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-3 rounded-lg border"
-          >
-            <option value="all">All</option>
-            <option value="pending">Pending Review</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
+      <div className="flex-1 overflow-hidden">
+        {/* TOP NAV */}
+        <div className="bg-white shadow border-b border-gray-300 px-8 py-4">
+          <div className="flex items-center gap-4">
+            <NavLink
+              to="/collector"
+              className={({ isActive }) =>
+                `px-6 py-3 font-semibold rounded-lg transition flex items-center gap-2 ${
+                  isActive ? "bg-black text-white shadow-sm" : "text-black hover:bg-gray-100"
+                }`
+              }
+              end
+            >
+              <FileText size={18} />
+              Project Requests
+            </NavLink>
+            <NavLink
+              to="/collector/verification"
+              className={({ isActive }) =>
+                `px-6 py-3 font-semibold rounded-lg transition flex items-center gap-2 ${
+                  isActive ? "bg-black text-white shadow-sm" : "text-black hover:bg-gray-100"
+                }`
+              }
+            >
+              <ShieldCheck size={18} />
+              Verification
+            </NavLink>
+            <NavLink
+              to="/collector/verification/map"
+              className={({ isActive }) =>
+                `px-6 py-3 font-semibold rounded-lg transition flex items-center gap-2 ${
+                  isActive ? "bg-black text-white shadow-sm" : "text-black hover:bg-gray-100"
+                }`
+              }
+            >
+              <MapPin size={18} />
+              District Map
+            </NavLink>
+          </div>
         </div>
 
-        {/* PROJECT CARDS */}
-        <div className="grid grid-cols-2 gap-6">
-          {filteredProjects.length === 0 ? (
-            <div className="col-span-2 text-center py-12">
-              <p className="text-gray-500 text-lg">No projects found</p>
-            </div>
-          ) : (
-            filteredProjects.map((project) => {
-              const badge = getStatusBadge(project.status);
-              const BadgeIcon = badge.icon;
-              
-              // Count document statuses
-              const docsApproved = project.documents.filter(d => d.status === "approved").length;
-              const docsTotal = project.documents.length;
-              
-              return (
-                <div
-                  key={project._id}
-                  onClick={() => setSelectedProject(project)}
-                  className={`bg-white p-6 border-2 rounded-xl shadow-sm hover:shadow-xl cursor-pointer transition ${
-                    selectedProject?._id === project._id ? "border-blue-500" : "border-gray-200"
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <h2 className="text-xl font-bold">{project.projectName}</h2>
-                    <div className={`px-3 py-1 rounded-full text-xs flex items-center gap-1 ${badge.bg} ${badge.text}`}>
-                      <BadgeIcon size={14} /> {badge.label}
+        <div className="p-8 overflow-auto h-[calc(100vh-140px)] bg-white text-black">
+          <h1 className="text-3xl font-bold mb-4">Project Requests</h1>
+
+          {/* Filters */}
+          <div className="flex gap-4 mb-6">
+            <input
+              type="text"
+              placeholder="Search project or village..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 px-4 py-3 rounded-lg border border-gray-300 text-black"
+            />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-3 rounded-lg border border-gray-300 text-black"
+            >
+              <option value="all">All</option>
+              <option value="pending">Pending Review</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+
+          {/* Projects Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredProjects.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-gray-600 text-lg">No projects found</p>
+              </div>
+            ) : (
+              filteredProjects.map((project) => {
+                const badge = getStatusBadge(project.status);
+                const BadgeIcon = badge.icon;
+                const docsApproved = project.documents?.filter(d => d.status === "approved").length || 0;
+                const docsTotal = project.documents?.length || 0;
+
+                return (
+                  <div
+                    key={project._id}
+                    onClick={() => setSelectedProject(project)}
+                    className={`bg-white p-6 border-2 rounded-xl shadow-sm hover:shadow-md cursor-pointer transition-all ${
+                      selectedProject?._id === project._id ? "border-black ring-2 ring-black/20" : "border-gray-300"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <h2 className="text-xl font-bold text-black">{project.projectName}</h2>
+                      <div className={`px-3 py-1 rounded-full text-xs flex items-center gap-1 ${badge.bg} ${badge.text}`}>
+                        <BadgeIcon size={14} />
+                        {badge.label}
+                      </div>
                     </div>
-                  </div>
 
-<p className="text-gray-600 mb-2">{project.village?.name || "Unknown Village"}</p>
-                  <p className="font-bold text-lg mb-3">₹{project.budget?.toLocaleString()}</p>
-                  
-                  {/* Document Status Summary */}
-                  <div className="flex items-center gap-2 text-sm mb-2">
-                    <FileCheck size={16} className="text-gray-500" />
-                    <span className="text-gray-700">
-                      Documents: <span className="font-semibold">{docsApproved}/{docsTotal}</span> approved
-                    </span>
-                  </div>
+                    <p className="text-gray-700 mb-2">{project.village?.name || "Unknown Village"}</p>
+                    <p className="font-bold text-lg mb-3 text-black">₹{project.budget?.toLocaleString()}</p>
 
-                  {/* Scheme Status */}
-                  {project.assignedScheme && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Award size={16} className="text-green-600" />
-                      <span className="text-green-700 font-semibold">
-                        Scheme Assigned
+                    <div className="flex items-center gap-2 text-sm mb-4">
+                      <FileCheck size={16} className="text-gray-700" />
+                      <span className="text-gray-800">
+                        {docsApproved}/{docsTotal} documents approved
                       </span>
                     </div>
-                  )}
-                  {/* View Work Packages */}
-<div className="mt-6 border-t pt-6">
-  <button
-    onClick={() => navigate(`/collector/work-packages/${selectedProject._id}`)}
-    className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2"
-  >
-    <FileText size={20} />
-    View Work Packages
-  </button>
-</div>
 
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* PROJECT DETAILS PANEL */}
-        {selectedProject && (
-          <div className="fixed right-0 top-0 w-[520px] h-full bg-white shadow-2xl overflow-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 z-10">
-              <button 
-                onClick={() => setSelectedProject(null)} 
-                className="text-white font-bold mb-4 hover:underline"
-              >
-                ← Close
-              </button>
-              <h1 className="text-2xl font-bold">{selectedProject.projectName}</h1>
-<p className="text-blue-100 mt-1">{selectedProject.village?.name || "Unknown Village"}</p>
-            </div>
-
-            <div className="p-6">
-              {/* Project Info */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500 font-semibold mb-1">BUDGET</p>
-                    <p className="font-bold text-lg">₹{selectedProject.budget?.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 font-semibold mb-1">STATUS</p>
-                    {(() => {
-                      const badge = getStatusBadge(selectedProject.status);
-                      const Icon = badge.icon;
-                      return (
-                        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded ${badge.bg} ${badge.text}`}>
-                          <Icon size={14} />
-                          <span className="text-sm font-semibold">{badge.label}</span>
+                    {project.assignedScheme && (
+                      <div className="bg-green-50 border border-green-200 p-3 rounded-lg mb-4">
+                        <div className="flex items-center gap-2">
+                          <Award size={16} className="text-green-600" />
+                          <span className="font-semibold text-green-800">{project.assignedScheme.schemeName}</span>
+                          <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                            ₹{project.assignedScheme.budgetLimit}
+                          </span>
                         </div>
-                      );
-                    })()}
+                      </div>
+                    )}
+
+                    <div className="mt-auto border-t border-gray-200 pt-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/collector/work-packages/${project._id}`);
+                        }}
+                        className="w-full bg-black hover:bg-gray-900 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all"
+                      >
+                        <FileText size={18} />
+                        View Work Packages
+                      </button>
+                    </div>
                   </div>
-                </div>
-                
-                {selectedProject.description && (
-                  <div className="mt-4">
-                    <p className="text-xs text-gray-500 font-semibold mb-1">DESCRIPTION</p>
-                    <p className="text-sm text-gray-700">{selectedProject.description}</p>
-                  </div>
-                )}
+                );
+              })
+            )}
+          </div>
+
+          {/* RIGHT PANEL - PROJECT DETAILS */}
+          {selectedProject && (
+            <div className="fixed right-0 top-0 w-[550px] h-full bg-white shadow-2xl border-l-2 border-gray-300 z-40 overflow-auto">
+              <div className="sticky top-0 bg-black text-white p-6 z-10 shadow-lg">
+                <button
+                  onClick={() => setSelectedProject(null)}
+                  className="text-white font-bold mb-4 hover:underline flex items-center gap-2"
+                >
+                  <ChevronRight className="rotate-180" />
+                  Close
+                </button>
+                <h1 className="text-2xl font-bold">{selectedProject.projectName}</h1>
+                <p className="text-gray-200">{selectedProject.village?.name}</p>
               </div>
 
-              {/* Documents Section */}
-              <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                <FileCheck className="text-blue-600" />
-                Documents ({selectedProject.documents.length})
-              </h3>
-              
-              {selectedProject.documents.length === 0 ? (
-                <div className="text-center py-8 bg-gray-50 rounded-lg">
-                  <FileText className="mx-auto text-gray-400 mb-2" size={32} />
-                  <p className="text-gray-500">No documents uploaded</p>
-                </div>
-              ) : (
-                <div className="space-y-3 mb-6">
-                  {selectedProject.documents.map((doc) => {
-                    const docBadge = getDocStatusBadge(doc.status);
-                    const DocIcon = docBadge.icon;
-                    
-                    return (
-                      <div 
-                        key={doc._id} 
-                        className={`p-4 bg-white border-2 ${docBadge.border} rounded-lg hover:shadow-md transition`}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-3 flex-1">
-                            <div className="bg-blue-100 p-2 rounded">
-                              <FileText className="text-blue-600" size={18} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-gray-900 truncate">{doc.fileName}</p>
-                              <p className="text-xs text-gray-500">{doc.documentType}</p>
-                            </div>
+              <div className="p-6 space-y-6">
+                {/* Project Summary */}
+                <div className="bg-gray-50 rounded-xl p-6">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <p className="text-xs text-gray-500 font-semibold mb-1">PROJECT BUDGET</p>
+                      <p className="text-2xl font-bold text-black">₹{selectedProject.budget?.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-semibold mb-1">STATUS</p>
+                      {(() => {
+                        const badge = getStatusBadge(selectedProject.status);
+                        const Icon = badge.icon;
+                        return (
+                          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${badge.bg} ${badge.text} font-bold`}>
+                            <Icon size={20} />
+                            {badge.label}
                           </div>
-                          
-                          <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${docBadge.bg} ${docBadge.text}`}>
-                            <DocIcon size={12} />
-                            {docBadge.label}
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* DOCUMENTS */}
+                <div>
+                  <h3 className="font-bold text-xl mb-4 flex items-center gap-2">
+                    <FileCheck className="text-black" />
+                    Documents ({selectedProject.documents?.length || 0})
+                  </h3>
+                  {selectedProject.documents?.length > 0 ? (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {selectedProject.documents.map((doc) => {
+                        const docBadge = getStatusBadge(doc.status);
+                        const DocIcon = docBadge.icon;
+                        return (
+                          <div key={doc._id} className={`p-4 border-2 rounded-xl ${docBadge.bg} ${docBadge.text} hover:shadow-md transition`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="bg-white/20 p-2 rounded-lg">
+                                  <FileText size={20} />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-black">{doc.fileName}</p>
+                                  <p className="text-sm opacity-75">{doc.documentType}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-white/50">
+                                <DocIcon size={16} />
+                                <span className="font-bold text-xs">{doc.status}</span>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setSelectedDoc(doc)}
+                              className="mt-3 w-full border border-gray-300 hover:border-black text-black py-2 rounded-lg font-medium transition-all"
+                            >
+                              Review Document
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-gray-50 rounded-xl">
+                      <FileText className="mx-auto text-gray-400 mb-4" size={48} />
+                      <p className="text-gray-500 text-lg">No documents uploaded</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* SCHEME SECTION */}
+                <div className="border-t border-gray-200 pt-6">
+                  <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
+                    <Award className="text-black" />
+                    Government Scheme
+                  </h3>
+
+                  {selectedProject.assignedScheme ? (
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 p-6 rounded-2xl mb-6 shadow-lg">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-4">
+                          <div className="bg-green-500 p-4 rounded-2xl">
+                            <Award className="w-8 h-8 text-white" />
+                          </div>
+                          <div>
+                            <h4 className="text-2xl font-bold text-green-900">{selectedProject.assignedScheme.schemeName}</h4>
+                            <p className="text-green-700 text-lg">Budget Limit: ₹{selectedProject.assignedScheme.budgetLimit.toLocaleString()}</p>
                           </div>
                         </div>
-                        
-                        {doc.reviewComments && (
-                          <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
-                            <p className="font-semibold text-gray-700">Review Note:</p>
-                            <p className="text-gray-600">{doc.reviewComments}</p>
-                          </div>
-                        )}
-                        
-                        <button 
-                          className="mt-3 w-full text-blue-600 hover:bg-blue-50 py-2 rounded font-medium text-sm border border-blue-300"
-                          onClick={() => setSelectedDoc(doc)}
+                        <button
+                          onClick={() => setShowSchemeModal(true)}
+                          disabled={loading}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all disabled:opacity-50"
                         >
-                          Review Document
+                          ✏️ Edit Scheme
                         </button>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Approval Section */}
-              {selectedProject.status === "pending" && (
-                <div className="border-t pt-6">
-                  <h3 className="font-bold mb-3">Final Decision</h3>
-                  
-                  <textarea
-                    value={reviewNote}
-                    onChange={(e) => setReviewNote(e.target.value)}
-                    placeholder="Enter your decision note (required for rejection)..."
-                    className="w-full p-3 border rounded-lg mb-4 resize-none"
-                    rows="4"
-                  />
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => {
-                        setShowApprovalModal(true);
-                        setActionType("approve");
-                      }}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg font-bold flex items-center justify-center gap-2"
-                    >
-                      <CheckCircle size={20} />
-                      Approve Project
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowApprovalModal(true);
-                        setActionType("reject");
-                      }}
-                      className="flex-1 bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg font-bold flex items-center justify-center gap-2"
-                    >
-                      <XCircle size={20} />
-                      Reject Project
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Assign Scheme Section */}
-              {selectedProject.status === "approved" && !selectedProject.assignedScheme && (
-                <div className="mt-6 border-t pt-6">
-                  <h3 className="font-bold mb-3 flex items-center gap-2">
-                    <Award className="text-blue-600" />
-                    Assign Scheme
-                  </h3>
-                  <button
-                    onClick={() => setShowSchemeModal(true)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2"
-                  >
-                    <Plus size={20} />
-                    Assign Scheme to Project
-                  </button>
-                </div>
-              )}
-
-              {/* Display Assigned Scheme */}
-              {selectedProject.assignedScheme && (
-                <div className="mt-6 border-t pt-6">
-                  <div className="bg-green-50 border-2 border-green-300 p-4 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Award className="text-green-600" size={20} />
-                      <p className="text-sm font-semibold text-green-700">Scheme Assigned:</p>
                     </div>
-                    <p className="text-lg font-bold text-green-900">
-                      {selectedProject.assignedScheme.schemeName}
-                    </p>
-                    {selectedProject.assignedScheme.description && (
-                      <p className="text-sm text-green-800 mt-2">
-                        {selectedProject.assignedScheme.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Show rejection reason if rejected */}
-              {selectedProject.status === "rejected" && selectedProject.rejectionReason && (
-                <div className="border-t pt-6">
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="text-red-600 mt-0.5" size={18} />
-                      <div>
-                        <p className="font-bold text-red-900 mb-1">Rejection Reason:</p>
-                        <p className="text-red-800 text-sm">{selectedProject.rejectionReason}</p>
-                      </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center hover:border-black transition-all bg-gray-50 hover:bg-gray-100">
+                      <Award className="w-20 h-20 mx-auto text-gray-400 mb-4" />
+                      <h3 className="text-2xl font-bold text-gray-700 mb-2">No Scheme Assigned</h3>
+                      <p className="text-gray-500 mb-6">Assign a government scheme to this approved project</p>
+                      <button
+                        onClick={() => setShowSchemeModal(true)}
+                        disabled={loading || selectedProject.status !== "approved"}
+                        className="bg-black hover:bg-gray-900 text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-3 mx-auto shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Plus size={24} />
+                        Assign Scheme Now
+                      </button>
                     </div>
-                  </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
 
-        {/* REVIEW MODAL */}
-        {selectedDoc && (
-          <DocumentReviewModal
-            doc={selectedDoc}
-            close={() => setSelectedDoc(null)}
-            refresh={fetchProjects}
-          />
-        )}
-
-        {/* APPROVE / REJECT CONFIRM MODAL */}
-        {showApprovalModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 w-[420px] rounded-xl shadow-2xl">
-              <div className="flex items-center gap-3 mb-4">
-                {actionType === "approve" ? (
-                  <div className="bg-green-100 p-3 rounded-full">
-                    <CheckCircle className="text-green-600" size={24} />
-                  </div>
-                ) : (
-                  <div className="bg-red-100 p-3 rounded-full">
-                    <XCircle className="text-red-600" size={24} />
+                {/* APPROVAL SECTION */}
+                {selectedProject.status === "pending" && (
+                  <div className="border-t border-gray-200 pt-6">
+                    <h3 className="font-bold text-xl mb-4">Final Decision</h3>
+                    <textarea
+                      value={reviewNote}
+                      onChange={(e) => setReviewNote(e.target.value)}
+                      placeholder="Enter decision notes (required for rejection)..."
+                      className="w-full p-4 border-2 border-gray-300 rounded-xl mb-6 resize-vertical min-h-[100px] text-black focus:border-black focus:outline-none"
+                      rows={4}
+                    />
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => {
+                          setActionType("approve");
+                          setShowApprovalModal(true);
+                        }}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white p-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg transition-all"
+                      >
+                        <CheckCircle size={24} />
+                        Approve Project
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActionType("reject");
+                          setShowApprovalModal(true);
+                        }}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white p-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg transition-all"
+                      >
+                        <XCircle size={24} />
+                        Reject Project
+                      </button>
+                    </div>
                   </div>
                 )}
-                <h2 className="text-xl font-bold">
-                  Confirm {actionType === "approve" ? "Approval" : "Rejection"}
-                </h2>
-              </div>
-
-              <p className="text-gray-600 mb-4">
-                {actionType === "approve" 
-                  ? "Are you sure you want to approve this project? This action will create a new project in the system."
-                  : "Are you sure you want to reject this project? Please ensure you have provided a rejection reason."}
-              </p>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowApprovalModal(false)}
-                  className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                
-                <button
-                  onClick={actionType === "approve" ? handleApprove : handleReject}
-                  className={`flex-1 text-white py-3 rounded-lg font-bold ${
-                    actionType === "approve"
-                      ? "bg-green-600 hover:bg-green-700"
-                      : "bg-red-600 hover:bg-red-700"
-                  }`}
-                >
-                  Confirm {actionType === "approve" ? "Approval" : "Rejection"}
-                </button>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ASSIGN SCHEME MODAL */}
-        {showSchemeModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 w-[450px] rounded-xl shadow-2xl">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="bg-blue-100 p-3 rounded-full">
-                  <Award className="text-blue-600" size={24} />
+          {/* SCHEME MODAL */}
+          {showSchemeModal && (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-3xl w-full max-w-6xl max-h-[90vh] overflow-hidden shadow-2xl border border-gray-200">
+                <div className="p-8 border-b border-gray-200 sticky top-0 bg-white z-10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-3xl font-bold text-black mb-2">
+                        {selectedProject.assignedScheme ? "✏️ Edit Scheme" : "➕ Assign Scheme"}
+                      </h2>
+                      <p className="text-gray-600 text-lg">
+                        Project: <span className="font-bold text-black">{selectedProject.projectName}</span> | 
+                        Budget: ₹{selectedProject.budget?.toLocaleString()}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowSchemeModal(false);
+                        setSchemeFilters({ category: "", budget: "" });
+                        setSchemeSearch("");
+                      }}
+                      className="p-3 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all shadow-sm"
+                    >
+                      <X className="w-7 h-7 text-gray-600 hover:text-black" />
+                    </button>
+                  </div>
                 </div>
-                <h2 className="text-xl font-bold">Assign Scheme</h2>
-              </div>
 
-              <p className="text-gray-600 mb-4">
-                Select a government scheme to assign to this approved project:
-              </p>
+                <div className="p-8 overflow-y-auto max-h-[calc(90vh-200px)]">
+                  {/* Filters */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 p-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-3xl shadow-inner">
+                    <div>
+                      <label className="block text-sm font-bold text-black mb-4 uppercase tracking-wide">Category</label>
+                      <select
+                        value={schemeFilters.category}
+                        onChange={(e) => {
+                          setSchemeFilters(prev => ({ ...prev, category: e.target.value }));
+                          fetchFilteredSchemes(e.target.value, schemeFilters.budget);
+                        }}
+                        className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:border-black focus:outline-none text-black font-semibold text-lg shadow-md hover:shadow-lg transition-all"
+                      >
+                        <option value="">🗂️ All Categories</option>
+                        {categories.map(cat => (
+                          <option key={cat.value} value={cat.value}>{cat.label}</option>
+                        ))}
+                      </select>
+                    </div>
 
-              <select
-                value={selectedScheme}
-                onChange={(e) => setSelectedScheme(e.target.value)}
-                className="w-full border border-gray-300 p-3 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">-- Select a Scheme --</option>
-                {schemes.map((scheme) => (
-                  <option key={scheme._id} value={scheme._id}>
-                    {scheme.schemeName}
-                  </option>
-                ))}
-              </select>
+                    <div>
+                      <label className="block text-sm font-bold text-black mb-4 uppercase tracking-wide">Min Budget</label>
+                      <input
+                        type="number"
+                        value={schemeFilters.budget}
+                        onChange={(e) => {
+                          setSchemeFilters(prev => ({ ...prev, budget: e.target.value }));
+                          fetchFilteredSchemes(schemeFilters.category, e.target.value);
+                        }}
+                        className="w-full p-5 border-2 border-gray-200 rounded-2xl focus:border-black focus:outline-none text-black font-semibold text-lg shadow-md hover:shadow-lg transition-all"
+                        placeholder="₹ 0"
+                      />
+                    </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowSchemeModal(false);
-                    setSelectedScheme("");
-                  }}
-                  className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAssignScheme}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold"
-                >
-                  Assign Scheme
-                </button>
+                    <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+                      <button
+                        onClick={() => fetchFilteredSchemes(schemeFilters.category, schemeFilters.budget)}
+                        className="flex-1 lg:flex-none bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white p-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 shadow-xl hover:shadow-2xl transition-all"
+                      >
+                        <Filter size={24} />
+                        Apply Filters
+                      </button>
+                      {selectedProject.assignedScheme && (
+                        <button
+                          onClick={() => handleCollectorSchemeAction("remove")}
+                          className="flex-1 lg:flex-none bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white p-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 shadow-xl hover:shadow-2xl transition-all"
+                        >
+                          <XCircle size={24} />
+                          Remove Scheme
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Search */}
+                  <div className="mb-10">
+                    <div className="relative bg-white shadow-2xl rounded-3xl p-1 border-4 border-gray-100">
+                      <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-8 h-8 text-gray-400" />
+                      <input
+                        type="text"
+                        value={schemeSearch}
+                        onChange={(e) => setSchemeSearch(e.target.value)}
+                        placeholder="🔍 Search 500+ schemes by name..."
+                        className="w-full pl-20 pr-6 py-6 border-none rounded-2xl focus:outline-none text-black text-xl font-semibold bg-transparent shadow-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Schemes Grid */}
+                  {filteredSchemes.length === 0 ? (
+                    <div className="text-center py-24 bg-gradient-to-b from-gray-50 to-gray-100 rounded-3xl shadow-xl">
+                      <Award className="w-32 h-32 mx-auto text-gray-300 mb-8 opacity-50" />
+                      <h3 className="text-3xl font-bold text-gray-600 mb-4">No schemes match your filters</h3>
+                      <p className="text-xl text-gray-500 mb-8">Try different category or budget range</p>
+                      <button
+                        onClick={() => {
+                          setSchemeFilters({ category: "", budget: "" });
+                          fetchFilteredSchemes();
+                        }}
+                        className="bg-black hover:bg-gray-900 text-white px-12 py-5 rounded-2xl font-bold text-xl shadow-2xl hover:shadow-3xl transition-all"
+                      >
+                        Clear All Filters
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                      {filteredSchemes.map((scheme) => {
+                        const isCurrent = selectedProject.assignedScheme?._id === scheme._id;
+                        const isSuitable = scheme.budgetLimitNum >= selectedProject.budget;
+                        
+                        return (
+                          <div
+                            key={scheme._id}
+                            className={`group p-8 border-4 rounded-3xl hover:shadow-3xl transition-all cursor-pointer overflow-hidden hover:-translate-y-2 bg-gradient-to-br ${
+                              isCurrent 
+                                ? "from-green-50 to-emerald-50 border-green-400 shadow-2xl ring-8 ring-green-100/50" 
+                                : isSuitable 
+                                ? "from-white to-gray-50 border-gray-200 hover:border-black/50 shadow-xl" 
+                                : "from-orange-50 to-red-50 border-orange-300 shadow-lg opacity-90"
+                            }`}
+                            onClick={() => handleCollectorSchemeAction("assign", scheme._id)}
+                          >
+                            <div className={`w-full h-4 rounded-2xl mb-8 shadow-inner ${
+                              isSuitable ? "bg-gradient-to-r from-green-400 to-emerald-500" : "bg-gradient-to-r from-orange-400 to-red-500"
+                            }`} />
+                            
+                            <div className="flex items-start justify-between mb-6">
+                              <h4 className="font-black text-2xl text-black group-hover:text-gray-900 line-clamp-2 pr-8 flex-1 leading-tight">
+                                {scheme.schemeName}
+                              </h4>
+                              <div className={`px-6 py-3 rounded-2xl text-lg font-black shadow-lg ${
+                                isCurrent 
+                                  ? "bg-green-600 text-white shadow-green-500/50" 
+                                  : isSuitable 
+                                  ? "bg-emerald-500 text-white shadow-emerald-500/50" 
+                                  : "bg-orange-500 text-white shadow-orange-500/50"
+                              }`}>
+                                {isCurrent ? "✅ CURRENT" : isSuitable ? "✅ FITS" : "⚠️ LOW"}
+                              </div>
+                            </div>
+                            
+                            <p className="text-gray-700 mb-8 text-lg leading-relaxed line-clamp-4 bg-white/60 p-5 rounded-2xl shadow-sm border backdrop-blur-sm">
+                              {scheme.description}
+                            </p>
+                            
+                            <div className="pt-8 border-t-4 border-gray-100">
+                              <div className="flex justify-between items-center mb-8">
+                                <span className="text-xl font-bold text-gray-600 uppercase tracking-wider">Max Budget</span>
+                                <span className={`text-3xl font-black ${
+                                  isSuitable ? "text-emerald-700 drop-shadow-lg" : "text-orange-700 drop-shadow-lg"
+                                }`}>
+                                  ₹{scheme.budgetLimit}
+                                </span>
+                              </div>
+                              <button 
+                                disabled={!isSuitable}
+                                className={`w-full py-6 px-8 rounded-3xl font-black text-xl flex items-center justify-center gap-4 shadow-2xl hover:shadow-4xl transition-all backdrop-blur-md ${
+                                  isCurrent 
+                                    ? "bg-green-600 hover:bg-green-700 text-white" 
+                                    : isSuitable 
+                                    ? "bg-gradient-to-r from-black to-gray-900 hover:from-gray-900 hover:to-black text-white" 
+                                    : "bg-gradient-to-r from-gray-400 to-gray-500 text-white cursor-not-allowed"
+                                }`}
+                              >
+                                {isCurrent ? (
+                                  <>
+                                    <CheckCircle size={28} />
+                                    Currently Assigned
+                                  </>
+                                ) : isSuitable ? (
+                                  <>
+                                    <Award size={28} />
+                                    Assign This Scheme
+                                  </>
+                                ) : (
+                                  <>
+                                    <AlertCircle size={28} />
+                                    Budget Too Low
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* DOCUMENT REVIEW MODAL */}
+          {selectedDoc && (
+            <DocumentReviewModal
+              doc={selectedDoc}
+              close={() => setSelectedDoc(null)}
+              refresh={fetchProjects}
+            />
+          )}
+
+          {/* APPROVAL MODAL */}
+          {showApprovalModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white p-8 rounded-2xl w-full max-w-md shadow-2xl">
+                <div className="flex items-center gap-4 mb-6">
+                  {actionType === "approve" ? (
+                    <div className="bg-green-100 p-4 rounded-2xl">
+                      <CheckCircle className="w-8 h-8 text-green-600" />
+                    </div>
+                  ) : (
+                    <div className="bg-red-100 p-4 rounded-2xl">
+                      <XCircle className="w-8 h-8 text-red-600" />
+                    </div>
+                  )}
+                  <h2 className="text-2xl font-bold">
+                    Confirm {actionType === "approve" ? "Approval" : "Rejection"}
+                  </h2>
+                </div>
+                <p className="text-gray-700 mb-8 text-lg leading-relaxed">
+                  {actionType === "approve"
+                    ? "All documents are approved. This will create the project in the system."
+                    : "Please ensure rejection reason is provided above."}
+                </p>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setShowApprovalModal(false)}
+                    className="flex-1 border-2 border-gray-300 text-black py-4 rounded-xl font-bold hover:bg-gray-50 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={actionType === "approve" ? handleApprove : handleReject}
+                    className={`flex-1 py-4 rounded-xl font-bold shadow-xl transition-all ${
+                      actionType === "approve"
+                        ? "bg-green-600 hover:bg-green-700 text-white"
+                        : "bg-red-600 hover:bg-red-700 text-white"
+                    }`}
+                  >
+                    {actionType === "approve" ? "✅ Approve Project" : "❌ Reject Project"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

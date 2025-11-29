@@ -11,6 +11,12 @@ import ProjectsList from './pages/ProjectDetails';
 import VillageProjectDashboard from './pages/VillageProjectDashboard';
 import ProjectDetails from "./pages/ProjectDetails";
 import CollectorWorkPackages from "./pages/CollectorWorkPackages";
+import OfficerVerificationList from "./pages/OfficerVerificationList";
+import ProjectVerification from "./pages/ProjectVerification";
+import "leaflet/dist/leaflet.css";
+import CollectorVerificationPage from './pages/CollectorVerificationPage';
+import CollectorGeospatialMap from './pages/CollectorGeospatialMap.jsx';
+import OfficerGeospatialMap from './pages/OfficerGeospatialMap.jsx';
 
 function App() {
   return (
@@ -30,13 +36,53 @@ function App() {
           
         />
         <Route
-  path="/officer/project/:projectId/work-packages"
-  element={
-    <PrivateRoute allowedRoles={["officer"]}>
-      <DocumentReview />
-    </PrivateRoute>
-  }
-/>
+          path="/officer/project/:projectId/work-packages"
+          element={
+            <PrivateRoute allowedRoles={["officer"]}>
+              <DocumentReview />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/collector/verification"
+          element={
+            <PrivateRoute allowedRoles={["collector"]}>
+              <CollectorVerificationPage />
+            </PrivateRoute>
+          }
+        />
+        <Route 
+          path="/collector/verification/map" 
+          element={
+            <PrivateRoute allowedRoles={["collector"]}>
+              <CollectorGeospatialMap />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/officer/verification/map" 
+          element={
+            <PrivateRoute allowedRoles={["officer"]}>
+              <OfficerGeospatialMap />
+            </PrivateRoute>
+          } 
+        />
+        <Route
+          path="/officer/project/:projectId/verification"
+          element={
+            <PrivateRoute allowedRoles={["officer"]}>
+              <ProjectVerification />
+            </PrivateRoute>
+          }
+        />
+        <Route 
+          path="/officer/verification" 
+          element={
+            <PrivateRoute allowedRoles={["officer"]}>
+              <OfficerVerificationList />
+            </PrivateRoute>
+          } 
+        />
         <Route
           path="/officer/submit-document"
           element={
