@@ -17,12 +17,14 @@ import "leaflet/dist/leaflet.css";
 import CollectorVerificationPage from './pages/CollectorVerificationPage';
 import CollectorGeospatialMap from './pages/CollectorGeospatialMap.jsx';
 import OfficerGeospatialMap from './pages/OfficerGeospatialMap.jsx';
+import Home from './pages/Home';
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Public Route */}
+        {/* Public Routes */}
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
 
         {/* Officer (Block/District Officer) Routes */}
@@ -33,7 +35,6 @@ function App() {
               <OfficerDashboard />
             </PrivateRoute>
           }
-          
         />
         <Route
           path="/officer/project/:projectId/work-packages"
@@ -91,7 +92,7 @@ function App() {
             </PrivateRoute>
           }
         />
-<Route path="/officer/project/:projectId" element={<ProjectDetails />} />
+        <Route path="/officer/project/:projectId" element={<ProjectDetails />} />
 
         {/* <Route
           path="/officer/projects"
@@ -160,7 +161,7 @@ function App() {
         <Route path="/no-access" element={<NoAccess />} />
 
         {/* Default Redirect */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
