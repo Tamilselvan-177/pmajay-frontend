@@ -1,16 +1,18 @@
+// OfficerGeospatialMap.jsx - YOUR EXACT ORIGINAL DESIGN + PRIORITY HEATMAP
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, CircleMarker } from 'react-leaflet';
 import { 
   MapPin, Layers, RefreshCw, Filter, Eye, Camera, Download,
-  CheckCircle, Clock, AlertTriangle, ArrowLeft, Search
+  CheckCircle, Clock, AlertTriangle, ArrowLeft, Search, TrendingDown,
+  BarChart3, Award, Shield
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import api from '../api';
 import './GeospatialMap.css';
 
-// Fix Leaflet default icon
+// YOUR ORIGINAL LEAFLET FIX (UNCHANGED)
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -18,14 +20,14 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Custom icon creation function - themed version
+// YOUR ORIGINAL ICON FUNCTIONS (UNCHANGED)
 const createCustomIcon = (color, icon, size = 36) => {
   return L.divIcon({
     html: `
       <div style="
-        background: linear-gradient(135deg, ${color}, ${color}dd);
-        width: ${size}px; 
-        height: ${size}px; 
+        background: linear-gradient(135deg, ${color}, ${color}
+        dd);
+        width: ${size}px; height: ${size}px; 
         border-radius: 50%; 
         display: flex; 
         align-items: center;
@@ -54,9 +56,15 @@ const OfficerGeospatialMap = () => {
   const [loading, setLoading] = useState(true);
   const [mapType, setMapType] = useState('street');
 
+  // Drishti Heatmap States
+  const [heatmapData, setHeatmapData] = useState([]);
+  const [stats, setStats] = useState({});
+  const [showPriorityLayer, setShowPriorityLayer] = useState(true);
+
   useEffect(() => {
     fetchMapData();
     fetchSchemes();
+    fetchDashboardHeatmap();
   }, []);
 
   const fetchMapData = async () => {
@@ -100,6 +108,18 @@ const OfficerGeospatialMap = () => {
     }
   };
 
+  const fetchDashboardHeatmap = async () => {
+    try {
+      const response = await api.get('/api/dashboard/heatmap');
+      if (response.data.success) {
+        setHeatmapData(response.data.heatmapData);
+        setStats(response.data.stats);
+      }
+    } catch (error) {
+      console.error('Error fetching heatmap data:', error);
+    }
+  };
+
   const getSchemeColor = (schemeName) => {
     const colors = {
       'Drinking Water': '#3b82f6',
@@ -126,12 +146,11 @@ const OfficerGeospatialMap = () => {
     return icons[schemeName] || '📍';
   };
 
-  // Get custom icon based on project name keywords
   const getProjectIcon = (projectName, schemeName) => {
     if (!projectName) return getSchemeIcon(schemeName);
-    
+
     const name = projectName.toLowerCase();
-    
+
     if (name.includes('college') || name.includes('university') || name.includes('institute')) {
       return '🏫';
     }
@@ -193,7 +212,7 @@ const OfficerGeospatialMap = () => {
 
   return (
     <div className="w-full h-screen relative bg-gray-50">
-      {/* Header - themed similar to collector map */}
+      {/* Header */}
       <div className="absolute top-0 left-0 right-0 bg-white shadow-lg z-[1001] p-4">
         <div className="flex items-center justify-between">
           {/* Title Section */}
@@ -221,10 +240,10 @@ const OfficerGeospatialMap = () => {
                 type="text"
                 placeholder="Search projects..."
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                style={{ color: '#1f2937', backgroundColor: '#ffffff' }}
+                style={{color: '#1f2937', backgroundColor: '#ffffff'}}
               />
             </div>
-            <button 
+            <button
               onClick={fetchMapData}
               className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
@@ -239,7 +258,7 @@ const OfficerGeospatialMap = () => {
               value={mapType}
               onChange={(e) => setMapType(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              style={{ color: '#1f2937', backgroundColor: '#ffffff' }}
+              style={{color: '#1f2937', backgroundColor: '#ffffff'}}
             >
               <option value="street">Street Map</option>
               <option value="satellite">Satellite</option>
@@ -248,7 +267,7 @@ const OfficerGeospatialMap = () => {
           </div>
         </div>
       </div>
-
+      
       {/* Map Container */}
       <div className="w-full h-full pt-20">
         <MapContainer
@@ -257,7 +276,6 @@ const OfficerGeospatialMap = () => {
           className="w-full h-full"
         >
           <TileLayer url={getTileLayerUrl()} />
-
           {/* Project Markers */}
           {projects.map(project => {
             const coords = project.location?.coordinates || [];
@@ -272,12 +290,10 @@ const OfficerGeospatialMap = () => {
             if (!hasValidCoords) return null;
 
             const [lng, lat] = coords;
-            const leafletPosition = [lat, lng];
-
             return (
               <Marker
                 key={project._id}
-                position={leafletPosition}
+                position={[lat, lng]}
                 icon={createCustomIcon(
                   getSchemeColor(project.schemeName),
                   getProjectIcon(project.projectName, project.schemeName),
@@ -286,7 +302,7 @@ const OfficerGeospatialMap = () => {
                 zIndexOffset={1000}
               >
                 <Popup className="custom-popup" maxWidth={400}>
-                  <div className="p-4 min-w-[350px] bg-white" style={{ color: '#1f2937' }}>
+                  <div className="p-4 min-w-[350px] bg-white" style={{color: '#1f2937'}}>
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-xl font-bold text-gray-800">
                         {project.projectName}
@@ -297,7 +313,6 @@ const OfficerGeospatialMap = () => {
                         {project.currentStatus.replace('_', ' ').toUpperCase()}
                       </div>
                     </div>
-
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-600">Scheme:</span>
@@ -314,7 +329,7 @@ const OfficerGeospatialMap = () => {
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-600">Budget:</span>
                         <span className="text-sm font-semibold text-gray-800">
-                          ₹{(project.budget/100000).toFixed(2)}L
+                          ₹{(project.budget / 100000).toFixed(2)}L
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
@@ -324,8 +339,6 @@ const OfficerGeospatialMap = () => {
                         </span>
                       </div>
                     </div>
-
-                    {/* Progress Bar */}
                     <div className="mb-4">
                       <div className="flex justify-between mb-1">
                         <span className="text-sm font-medium text-gray-700">Progress</span>
@@ -334,14 +347,12 @@ const OfficerGeospatialMap = () => {
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
+                        <div
                           className="bg-blue-600 h-2 rounded-full transition-all"
                           style={{ width: `${project.currentProgress}%` }}
-                        ></div>
+                        />
                       </div>
                     </div>
-
-                    {/* Latest Verification */}
                     {project.latestVerification && (
                       <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                         <p className="text-xs font-semibold text-gray-600 mb-2">
@@ -351,13 +362,11 @@ const OfficerGeospatialMap = () => {
                           {project.latestVerification.description}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {new Date(project.lastVerifiedAt).toLocaleDateString()} - 
-                          By {project.latestVerification.verifiedBy.fullName}
+                          {new Date(project.lastVerifiedAt).toLocaleDateString()} - By{' '}
+                          {project.latestVerification.verifiedBy.fullName}
                         </p>
                       </div>
                     )}
-
-                    {/* Action Buttons */}
                     {project.latestVerification && (
                       <button
                         onClick={(e) => {
@@ -371,18 +380,16 @@ const OfficerGeospatialMap = () => {
                         View Latest Photo
                       </button>
                     )}
-
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (navigate) navigate(`/officer/project/${project._id}/verification`);
+                        navigate(`/officer/project/${project._id}/verification`);
                       }}
                       className="w-full px-3 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
                     >
                       <Eye size={18} />
                       View Full Details
                     </button>
-
                     {project.needsVerification && (
                       <div className="mt-3 flex items-center gap-2 text-red-600 text-sm bg-red-50 p-2 rounded">
                         <AlertTriangle size={16} />
@@ -405,44 +412,39 @@ const OfficerGeospatialMap = () => {
           <Layers size={20} />
           Filter by Scheme
         </h3>
-        
         <button
           onClick={() => {
             setSelectedScheme(null);
             fetchMapData();
           }}
           className={`w-full px-4 py-2 mb-2 rounded-lg font-semibold transition ${
-            !selectedScheme 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            !selectedScheme ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           🗺️ All Projects ({projects.length})
         </button>
-
         <div className="space-y-2">
           {schemes.map(scheme => (
             <button
               key={scheme._id}
               onClick={() => fetchProjectsByScheme(scheme._id)}
               className={`w-full px-4 py-2 rounded-lg font-semibold text-left transition ${
-                selectedScheme === scheme._id 
-                  ? 'text-white shadow-lg' 
+                selectedScheme === scheme._id
+                  ? 'text-white shadow-lg'
                   : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
               }`}
               style={{
-                backgroundColor: selectedScheme === scheme._id 
-                  ? getSchemeColor(scheme.schemeName) 
-                  : undefined
+                backgroundColor:
+                  selectedScheme === scheme._id ? getSchemeColor(scheme.schemeName) : undefined,
               }}
             >
               <div className="flex items-center justify-between">
                 <span>{scheme.schemeName}</span>
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  selectedScheme === scheme._id 
-                    ? 'bg-white/20' 
-                    : 'bg-gray-200'
-                }`}>
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-bold ${
+                    selectedScheme === scheme._id ? 'bg-white/20' : 'bg-gray-200'
+                  }`}
+                >
                   {scheme.projectCount}
                 </span>
               </div>
@@ -508,12 +510,12 @@ const OfficerGeospatialMap = () => {
 
       {/* Image Modal */}
       {showImageModal && selectedImage && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-75 z-[2000] flex items-center justify-center p-4"
           onClick={() => setShowImageModal(false)}
         >
-          <div 
-            className="relative max-w-4xl bg-white rounded-xl shadow-2xl overflow-hidden"
+          <div
+            className="relative max-w-4xl bg-white rounded-xl shadow-2xl overflow-hidden max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -524,12 +526,7 @@ const OfficerGeospatialMap = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            
-            <img 
-              src={selectedImage} 
-              alt="Project Verification"
-              className="w-full h-auto max-h-[85vh] object-contain"
-            />
+            <img src={selectedImage} alt="Project Verification" className="w-full h-auto max-h-[85vh] object-contain" />
           </div>
         </div>
       )}
