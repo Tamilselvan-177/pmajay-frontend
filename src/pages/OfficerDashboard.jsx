@@ -80,32 +80,38 @@ const OfficerDashboard = () => {
 
   // 🔥 NEW DASHBOARD FUNCTIONS (ADDED)
   const fetchDashboardData = async () => {
-    try {
-      setHeatmapLoading(true);
-      const res = await api.get("/api/dashboard/heatmap");
-      setDashboardData(res.data);
-      
-      const priorityVillages = res.data.heatmapData
-        ?.filter(v => v.color === "red" || v.color === "yellow")
-        ?.slice(0, 5);
-      
-      const projects = priorityVillages?.map(village => ({
-        villageName: village.villageName,
-        readiness: village.readiness,
-        priority: village.priority,
-        topGap: "Roads/Water",
-        estimatedCost: 500000,
-        urgency: village.color === "red" ? "urgent" : "high"
-      })) || [];
-      
-      setPriorityProjects(projects);
-    } catch (err) {
-      console.error("Error loading dashboard:", err);
-    } finally {
-      setHeatmapLoading(false);
-    }
-  };
-
+  try {
+    setHeatmapLoading(true);
+    const res = await api.get("/api/dashboard/heatmap");
+    setDashboardData(res.data);
+    
+    const priorityVillages = res.data.heatmapData
+      ?.filter(v => v.color === "red" || v.color === "yellow")
+      ?.slice(0, 5);
+    
+    const projects = priorityVillages?.map(village => ({
+      villageName: village.villageName,
+      readiness: village.readiness?.overallReadiness || 0, // ✅ FIXED: Direct number, not nested object
+      priority: village.priority,
+      topGap: Object.entries(village.readiness?.domainScores || {})
+        .filter(([_, d]) => d.percentage < 50)
+        .sort((a, b) => b[1].gap - a[1].gap)
+        .slice(0, 2)
+        .map(([key]) => key.replace(/([A-Z])/g, ' $1').trim())
+        .join(' / ') || "Multiple Domains",
+      estimatedCost: Object.entries(village.readiness?.domainScores || {})
+        .filter(([_, d]) => d.percentage < 50)
+        .reduce((sum, [_, d]) => sum + (d.gap * 50000), 0) || 500000,
+      urgency: village.color === "red" ? "urgent" : "high"
+    })) || [];
+    
+    setPriorityProjects(projects);
+  } catch (err) {
+    console.error("Error loading dashboard:", err);
+  } finally {
+    setHeatmapLoading(false);
+  }
+};
   const fetchVillageDetails = async (villageId) => {
     try {
       const res = await api.get(`/api/dashboard/village/${villageId}`);
@@ -193,171 +199,214 @@ const OfficerDashboard = () => {
 
   // 🔥 NEW COMPONENTS (ADDED - 300+ LINES)
   const VillageCard = ({ village, onClick }) => (
-    <div 
-      className="group cursor-pointer p-6 border-2 border-gray-200 hover:border-black hover:shadow-xl rounded-2xl transition-all bg-gradient-to-br hover:from-gray-50"
-      onClick={() => onClick(village)}
-    >
-      <div className="flex items-start justify-between mb-4">
-        <h3 className="text-xl font-bold text-black group-hover:text-gray-900">
-          {village.villageName}
-        </h3>
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${getPriorityColor(village.color)}`}>
-          {village.color === "red" ? <AlertTriangle className="w-6 h-6 text-white" /> :
-           village.color === "yellow" ? <TrendingDown className="w-6 h-6 text-white" /> :
-           village.color === "green" ? <Award className="w-6 h-6 text-white" /> :
-           <MapPin className="w-6 h-6 text-white" />}
-        </div>
-      </div>
-      
-      <div className="space-y-3 mb-4">
-        <div className="flex items-center gap-2 text-sm">
-          <BarChart3 className="w-4 h-4 text-gray-600" />
-          <span className="text-gray-800 font-semibold">{village.readiness}% Readiness</span>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <Users className="w-4 h-4 text-gray-600" />
-          <span className="text-gray-800">{village.scPopulation} SC Population</span>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <MapPin className="w-4 h-4 text-gray-600" />
-          <span className="text-gray-800">{village.surveys} Surveys</span>
-        </div>
-      </div>
-      
-      <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-        <span className="text-sm font-bold text-gray-700 capitalize">{village.priority}</span>
-        <ChevronRight className="w-5 h-5 text-gray-500 group-hover:translate-x-1 transition-transform" />
+  <div 
+    className="group cursor-pointer p-6 border-2 border-gray-200 hover:border-black hover:shadow-xl rounded-2xl transition-all bg-gradient-to-br hover:from-gray-50"
+    onClick={() => onClick(village)}
+  >
+    <div className="flex items-start justify-between mb-4">
+      <h3 className="text-xl font-bold text-black group-hover:text-gray-900">
+        {village.villageName}
+      </h3>
+      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${getPriorityColor(village.color)}`}>
+        {village.color === "red" ? <AlertTriangle className="w-6 h-6 text-white" /> :
+         village.color === "yellow" ? <TrendingDown className="w-6 h-6 text-white" /> :
+         village.color === "green" ? <Award className="w-6 h-6 text-white" /> :
+         <MapPin className="w-6 h-6 text-white" />}
       </div>
     </div>
-  );
-
-  const PriorityProjectCard = ({ project }) => (
-    <div className="p-6 border-2 border-gray-200 hover:border-gray-900 rounded-2xl hover:shadow-xl transition-all bg-gradient-to-r from-white hover:from-gray-50">
-      <div className="flex items-start justify-between mb-4">
-        <h4 className="font-bold text-lg text-black">{project.villageName}</h4>
-        <div className={`px-3 py-1 rounded-full text-xs font-bold ${
-          project.urgency === "urgent" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
-        }`}>
-          {project.urgency.toUpperCase()}
-        </div>
+    
+    <div className="space-y-3 mb-4">
+      <div className="flex items-center gap-2 text-sm">
+        <BarChart3 className="w-4 h-4 text-gray-600" />
+        <span className="text-gray-800 font-semibold">
+          {village.readiness?.overallReadiness || 0}% Readiness {/* ✅ FIXED: Safe access with fallback */}
+        </span>
       </div>
-      
-      <div className="space-y-3 mb-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-700">Readiness</span>
-          <span className="font-bold text-black">{project.readiness}%</span>
-        </div>
-        <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-          <span className="text-sm text-gray-700">Top Gap</span>
-          <span className="font-bold text-red-600">{project.topGap}</span>
-        </div>
+      <div className="flex items-center gap-2 text-sm">
+        <Users className="w-4 h-4 text-gray-600" />
+        <span className="text-gray-800">{village.scPopulation || 0} SC Population</span>
       </div>
-      
-      <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-xl">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-gray-700">Est. Cost</span>
-          <span className="text-xl font-bold text-black">{formatBudget(project.estimatedCost)}</span>
-        </div>
+      <div className="flex items-center gap-2 text-sm">
+        <MapPin className="w-4 h-4 text-gray-600" />
+        <span className="text-gray-800">{village.surveys || 0} Surveys</span>
       </div>
     </div>
-  );
+    
+    <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+      <span className="text-sm font-bold text-gray-700 capitalize">{village.priority || "unknown"}</span>
+      <ChevronRight className="w-5 h-5 text-gray-500 group-hover:translate-x-1 transition-transform" />
+    </div>
+  </div>
+);
 
-  const VillageDetailsModal = ({ village, onClose }) => (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="sticky top-0 bg-white p-6 border-b border-gray-200 z-10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg ${getPriorityColor(village.color)}`}>
-                {village.color === "red" ? <AlertTriangle className="w-8 h-8 text-white" /> :
-                 village.color === "yellow" ? <TrendingDown className="w-8 h-8 text-white" /> :
-                 village.color === "green" ? <Award className="w-8 h-8 text-white" /> : null}
-              </div>
-              <div>
-                <h2 className="text-3xl font-bold text-black">{village.village?.name}</h2>
-                <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
-                  <span>{village.village?.scPopulation} SC Population</span>
-                  <span>{village.totalHousesSurveyed} Houses Surveyed</span>
-                </div>
+ const PriorityProjectCard = ({ project }) => (
+  <div className="p-6 border-2 border-gray-200 hover:border-gray-900 rounded-2xl hover:shadow-xl transition-all bg-gradient-to-r from-white hover:from-gray-50">
+    <div className="flex items-start justify-between mb-4">
+      <h4 className="font-bold text-lg text-black">{project.villageName}</h4>
+      <div className={`px-3 py-1 rounded-full text-xs font-bold ${
+        project.urgency === "urgent" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
+      }`}>
+        {project.urgency.toUpperCase()}
+      </div>
+    </div>
+    
+    <div className="space-y-3 mb-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-gray-700">Readiness</span>
+        <span className="font-bold text-black">
+          {project.readiness}% {/* ✅ FIXED: Direct access, no nested object */}
+        </span>
+      </div>
+      <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+        <span className="text-sm text-gray-700">Top Gap</span>
+        <span className="font-bold text-red-600 text-xs text-right">{project.topGap}</span>
+      </div>
+    </div>
+    
+    <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-xl">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-gray-700">Est. Cost</span>
+        <span className="text-xl font-bold text-black">
+          {new Intl.NumberFormat("en-IN", {
+            style: "currency", 
+            currency: "INR", 
+            maximumFractionDigits: 0
+          }).format(project.estimatedCost)}
+        </span>
+      </div>
+    </div>
+  </div>
+);
+ const VillageDetailsModal = ({ village, onClose }) => (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div className="sticky top-0 bg-white p-6 border-b border-gray-200 z-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg ${getPriorityColor(village.readiness?.color || "gray")}`}>
+              {village.readiness?.color === "red" ? <AlertTriangle className="w-8 h-8 text-white" /> :
+               village.readiness?.color === "yellow" ? <TrendingDown className="w-8 h-8 text-white" /> :
+               village.readiness?.color === "green" ? <Award className="w-8 h-8 text-white" /> : 
+               <MapPin className="w-8 h-8 text-white" />}
+            </div>
+            <div>
+              <h2 className="text-3xl font-bold text-black">{village.village?.name || "Unknown Village"}</h2>
+              <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                <span>{village.village?.scPopulation || 0} SC Population</span>
+                <span>{village.totalHousesSurveyed || 0} Houses Surveyed</span>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-2xl">
-              <X className="w-6 h-6" />
-            </button>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-2xl">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+      </div>
+
+      <div className="p-8 space-y-8">
+        {/* Readiness Score */}
+        <div className="bg-gradient-to-r from-gray-50 to-white p-8 rounded-3xl border">
+          <div className="flex items-center gap-4 mb-6">
+            <BarChart3 className="w-12 h-12 text-gray-600" />
+            <div>
+              <h3 className="text-2xl font-bold text-black mb-1">
+                {village.readiness?.overallReadiness || 0}% Readiness {/* ✅ FIXED */}
+              </h3>
+              <span className={`px-4 py-2 rounded-full font-bold ${
+                village.readiness?.color === "red" ? "bg-red-100 text-red-800" :
+                village.readiness?.color === "yellow" ? "bg-yellow-100 text-yellow-800" :
+                village.readiness?.color === "green" ? "bg-green-100 text-green-800" :
+                "bg-gray-100 text-gray-800"
+              }`}>
+                {(village.readiness?.priority || "unknown").toUpperCase()}
+              </span>
+            </div>
+          </div>
+          
+          {/* Domain Scores */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Object.entries(village.readiness?.domainScores || {}).map(([domain, data]) => (
+              <div key={domain} className="p-4 bg-white rounded-2xl border hover:shadow-md transition">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-gray-700 capitalize">
+                    {domain.replace(/([A-Z])/g, ' $1').trim()}
+                  </span>
+                  <span className={`text-2xl font-bold ${
+                    data.percentage >= 70 ? "text-green-600" :
+                    data.percentage >= 50 ? "text-yellow-600" : "text-red-600"
+                  }`}>
+                    {data.percentage || 0}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full transition-all ${
+                      data.percentage >= 70 ? "bg-green-500" :
+                      data.percentage >= 50 ? "bg-yellow-500" : "bg-red-500"
+                    }`}
+                    style={{ width: `${data.percentage || 0}%` }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="p-8 space-y-8">
-          {/* Readiness Score */}
-          <div className="bg-gradient-to-r from-gray-50 to-white p-8 rounded-3xl border">
-            <div className="flex items-center gap-4 mb-6">
-              <BarChart3 className="w-12 h-12 text-gray-600" />
-              <div>
-                <h3 className="text-2xl font-bold text-black mb-1">{village.readiness?.overallReadiness}% Readiness</h3>
-                <span className="px-4 py-2 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 rounded-full font-bold">
-                  {village.readiness?.priority?.toUpperCase()}
-                </span>
-              </div>
-            </div>
-            
-            {/* Domain Scores */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Object.entries(village.readiness?.domainScores || {}).map(([domain, data]) => (
-                <div key={domain} className="p-4 bg-white rounded-2xl border hover:shadow-md transition">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-gray-700 capitalize">{domain.replace(/([A-Z])/g, ' $1')}</span>
-                    <span className={`text-2xl font-bold ${
-                      data.percentage >= 70 ? "text-green-600" :
-                      data.percentage >= 50 ? "text-yellow-600" : "text-red-600"
-                    }`}>
-                      {data.percentage}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full transition-all ${
-                        data.percentage >= 70 ? "bg-green-500" :
-                        data.percentage >= 50 ? "bg-yellow-500" : "bg-red-500"
-                      }`}
-                      style={{ width: `${data.percentage}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Priority Projects */}
+        {/* Priority Projects */}
+        {village.projectPipeline && village.projectPipeline.length > 0 && (
           <div>
             <h3 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
               <TrendingDown className="w-8 h-8" />
-              Priority Projects
+              Recommended Projects
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {village.projectPipeline?.map((project, index) => (
-                <PriorityProjectCard key={index} project={project} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {village.projectPipeline.slice(0, 6).map((project, index) => (
+                <div key={index} className="p-6 border-2 border-gray-200 rounded-2xl hover:shadow-lg transition">
+                  <div className="flex items-start justify-between mb-3">
+                    <h4 className="font-bold text-black">{project.domainName || project.domain}</h4>
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                      project.priority === "high" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
+                    }`}>
+                      {project.priority?.toUpperCase() || "MEDIUM"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700 mb-4">{project.projectType}</p>
+                  <div className="pt-3 border-t border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600">Est. Budget</span>
+                      <span className="font-bold text-black">
+                        {new Intl.NumberFormat("en-IN", {
+                          style: "currency",
+                          currency: "INR",
+                          maximumFractionDigits: 0
+                        }).format(project.estimatedBudget || 0)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
+        )}
 
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-4 pt-6 border-t border-gray-200">
-            <button 
-              onClick={() => navigate(`/officer/project/new?priorityVillage=${village.village?._id}`)}
-              className="bg-black text-white px-8 py-4 rounded-2xl font-bold hover:bg-gray-900 transition flex items-center gap-3 text-lg"
-            >
-              <Plus className="w-5 h-5" />
-              Create Priority Project
-            </button>
-            <button className="border-2 border-black text-black px-8 py-4 rounded-2xl font-bold hover:bg-black hover:text-white transition flex items-center gap-3 text-lg">
-              <FileText className="w-5 h-5" />
-              Export Report
-            </button>
-          </div>
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-4 pt-6 border-t border-gray-200">
+          <button 
+            onClick={() => navigate(`/officer/project/new?priorityVillage=${village.village?._id}`)}
+            className="bg-black text-white px-8 py-4 rounded-2xl font-bold hover:bg-gray-900 transition flex items-center gap-3 text-lg"
+          >
+            <Plus className="w-5 h-5" />
+            Create Priority Project
+          </button>
+          <button className="border-2 border-black text-black px-8 py-4 rounded-2xl font-bold hover:bg-black hover:text-white transition flex items-center gap-3 text-lg">
+            <FileText className="w-5 h-5" />
+            Export Report
+          </button>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 
   // 🔥 YOUR EXISTING RequestCard COMPONENT (UNCHANGED - 100% PRESERVED)
   const RequestCard = ({ request }) => (
