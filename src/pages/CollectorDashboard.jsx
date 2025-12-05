@@ -189,13 +189,13 @@ const CollectorDashboard = () => {
   return (
     <div className="flex h-screen bg-white text-black">
       {/* SIDEBAR */}
-      <div className="w-80 bg-white border-r border-gray-300 shadow-sm p-5 overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-5 flex items-center gap-2 text-black">
+      <div className="w-64 bg-white border-r border-gray-300 shadow-sm p-5 overflow-y-auto">
+        <h2 className="text-2xl font-bold mb-8 flex items-center gap-2 text-black">
           <Building2 className="text-black" />
           Collector Panel
         </h2>
 
-        <div className="space-y-2 mb-6">
+        <div className="space-y-1 mb-8">
           <NavLink
             to="/collector"
             className={({ isActive }) =>
@@ -211,26 +211,28 @@ const CollectorDashboard = () => {
           <NavLink
             to="/collector/verification"
             className={({ isActive }) =>
-              `w-full block p-3 rounded-lg font-semibold flex items-center gap-2 transition ${
+              `w-full block p-3 rounded-lg font-semibold flex items-center gap-3 transition ${
                 isActive ? "bg-black text-white shadow-md" : "text-black hover:bg-gray-100"
               }`
             }
           >
-            <ShieldCheck size={18} />
+            <ShieldCheck size={20} />
             Verification
           </NavLink>
           <NavLink
             to="/collector/verification/map"
             className={({ isActive }) =>
-              `w-full block p-3 rounded-lg font-semibold flex items-center gap-2 transition ${
+              `w-full block p-3 rounded-lg font-semibold flex items-center gap-3 transition ${
                 isActive ? "bg-black text-white shadow-md" : "text-black hover:bg-gray-100"
               }`
             }
           >
-            <MapPin size={18} />
+            <MapPin size={20} />
             District Map
           </NavLink>
         </div>
+
+        <div className="h-px bg-gray-200 my-4"></div>
 
         <div className="mb-4">
           <button
@@ -266,48 +268,12 @@ const CollectorDashboard = () => {
 
       {/* MAIN CONTENT */}
       <div className="flex-1 overflow-hidden">
-        {/* TOP NAV */}
-        <div className="bg-white shadow border-b border-gray-300 px-8 py-4">
-          <div className="flex items-center gap-4">
-            <NavLink
-              to="/collector"
-              className={({ isActive }) =>
-                `px-6 py-3 font-semibold rounded-lg transition flex items-center gap-2 ${
-                  isActive ? "bg-black text-white shadow-sm" : "text-black hover:bg-gray-100"
-                }`
-              }
-              end
-            >
-              <FileText size={18} />
-              Project Requests
-            </NavLink>
-            <NavLink
-              to="/collector/verification"
-              className={({ isActive }) =>
-                `px-6 py-3 font-semibold rounded-lg transition flex items-center gap-2 ${
-                  isActive ? "bg-black text-white shadow-sm" : "text-black hover:bg-gray-100"
-                }`
-              }
-            >
-              <ShieldCheck size={18} />
-              Verification
-            </NavLink>
-            <NavLink
-              to="/collector/verification/map"
-              className={({ isActive }) =>
-                `px-6 py-3 font-semibold rounded-lg transition flex items-center gap-2 ${
-                  isActive ? "bg-black text-white shadow-sm" : "text-black hover:bg-gray-100"
-                }`
-              }
-            >
-              <MapPin size={18} />
-              District Map
-            </NavLink>
-          </div>
+        {/* Page Header */}
+        <div className="bg-white border-b border-gray-200 px-8 py-6">
+          <h1 className="text-2xl font-bold text-gray-900">Project Requests</h1>
         </div>
 
         <div className="p-8 overflow-auto h-[calc(100vh-140px)] bg-white text-black">
-          <h1 className="text-3xl font-bold mb-4">Project Requests</h1>
 
           {/* Filters */}
           <div className="flex gap-4 mb-6">

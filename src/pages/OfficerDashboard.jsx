@@ -3,10 +3,11 @@ import React, { useEffect, useState } from "react";
 import api from "../api";
 import { useNavigate } from "react-router-dom";
 import { 
-  FolderOpen, Clock, CheckCircle, ChevronRight, FileText, Plus, X, Upload,
+  FolderOpen, Clock, CheckCircle, ChevronRight, ChevronLeft, FileText, Plus, X, Upload,
   Camera, Eye, Shield, Award, Filter, Search, MapPin, TrendingDown, AlertTriangle,
-  BarChart3, Zap, Droplets, School, Home, Users, Sun, Map
+  BarChart3, Zap, Droplets, School, Home, Users, Sun, Map, Building2, Menu, Globe, ChevronDown, User, LogOut, Key, Settings
 } from "lucide-react";
+import CoatOfArms from "../../assests/coat_arms_india.png";
 
 const OfficerDashboard = () => {
   const navigate = useNavigate();
@@ -30,10 +31,19 @@ const OfficerDashboard = () => {
   // 🔥 NEW DASHBOARD STATES (ADDED)
   const [dashboardData, setDashboardData] = useState(null);
   const [villageDetails, setVillageDetails] = useState(null);
-  const [activeTab, setActiveTab] = useState("projects"); // projects | dashboard | heatmap
+  const [activeTab, setActiveTab] = useState("dashboard"); // projects | dashboard | heatmap
   const [heatmapLoading, setHeatmapLoading] = useState(false);
   const [selectedVillage, setSelectedVillage] = useState(null);
   const [priorityProjects, setPriorityProjects] = useState([]);
+
+  // 🔥 HEADER STATES
+  const [userData, setUserData] = useState(null);
+  const [lastLogin, setLastLogin] = useState(null);
+  const [language, setLanguage] = useState("English");
+  const [selectedLocation, setSelectedLocation] = useState("SOUTH WEST (DELHI)");
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // 🔥 ALL EXISTING FUNCTIONS (UNCHANGED)
   const fetchMyRequests = async () => {
@@ -113,6 +123,82 @@ const OfficerDashboard = () => {
     } catch (err) {
       console.error("Error loading village details:", err);
     }
+  };
+
+  // 🔥 FETCH USER DATA
+  const fetchUserData = async () => {
+    try {
+      // Try to get user data from API
+      const res = await api.get("/api/auth/me").catch(() => null);
+      if (res?.data?.user) {
+        setUserData(res.data.user);
+        // Store location if available
+        if (res.data.user.district) {
+          const districtRes = await api.get(`/api/location/districts/${res.data.user.district}`).catch(() => null);
+          if (districtRes?.data?.district) {
+            setSelectedLocation(districtRes.data.district.name.toUpperCase());
+          }
+        }
+      } else {
+        // Fallback: use localStorage data
+        const role = localStorage.getItem('role');
+        setUserData({
+          fullName: localStorage.getItem('fullName') || 'Nodal Officer',
+          role: role || 'officer',
+          district: localStorage.getItem('district') || 'SOUTH WEST (DELHI)'
+        });
+      }
+    } catch (err) {
+      console.error("Error loading user data:", err);
+      // Fallback to localStorage
+      const role = localStorage.getItem('role');
+      setUserData({
+        fullName: localStorage.getItem('fullName') || 'Nodal Officer',
+        role: role || 'officer',
+        district: localStorage.getItem('district') || 'SOUTH WEST (DELHI)'
+      });
+    }
+  };
+
+  // 🔥 GET LAST LOGIN TIME
+  useEffect(() => {
+    const storedLastLogin = localStorage.getItem('lastLogin');
+    if (storedLastLogin) {
+      setLastLogin(storedLastLogin);
+    } else {
+      // Set current time as last login in format: DD-MM-YYYY H:MM am/pm
+      const now = new Date();
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'pm' : 'am';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // the hour '0' should be '12'
+      const formatted = `${day}-${month}-${year} ${hours}:${minutes} ${ampm}`;
+      setLastLogin(formatted);
+      localStorage.setItem('lastLogin', formatted);
+    }
+    fetchUserData();
+  }, []);
+
+  // 🔥 CLOSE DROPDOWNS ON OUTSIDE CLICK
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.dropdown-container')) {
+        setShowLanguageDropdown(false);
+        setShowUserDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // 🔥 HANDLE LOGOUT
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/login');
   };
 
   // 🔥 ALL EXISTING USEEFFECT (ENHANCED)
@@ -980,53 +1066,201 @@ const OfficerDashboard = () => {
     }
   };
 
-  // 🔥 ENHANCED TOP NAVIGATION WITH TABS (NEW)
+  // Main Layout with Header and Sidebar Navigation
   return (
-    <div className="min-h-screen bg-white text-black">
-      {/* 🔥 NEW TAB NAVIGATION + ORIGINAL NAVIGATION COMBINED */}
-      <div className="flex items-center gap-1 mb-6 border-b border-gray-300 pb-4 bg-white shadow-sm max-w-7xl mx-auto px-8 rounded-t-lg">
-        <button
-          onClick={() => setActiveTab("dashboard")}
-          className={`group relative px-6 py-3 font-semibold text-black hover:bg-gray-100 transition-all duration-200 flex items-center gap-2 rounded-lg ${
-            activeTab === "dashboard" ? "bg-black text-white shadow-lg" : ""
-          }`}
-        >
-          <BarChart3 className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          Dashboard
-        </button>
+    <div className="flex h-screen overflow-hidden bg-white">
+      {/* SIDEBAR */}
+      <div className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-white border-r border-gray-300 shadow-sm overflow-hidden transition-all duration-300 relative`}>
+        <div className="p-5 overflow-y-auto h-full flex flex-col">
+          
+          {/* Navigation Items */}
+          <div className="space-y-1 mb-8 flex-1">
+            <button
+              onClick={() => setActiveTab("dashboard")}
+              className={`w-full text-left p-3 rounded-lg font-semibold flex items-center gap-3 transition ${
+                activeTab === "dashboard" ? "bg-[#16a249] text-white shadow-md" : "text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              <BarChart3 size={20} />
+              Dashboard
+            </button>
+            
+            <button
+              onClick={() => setActiveTab("projects")}
+              className={`w-full text-left p-3 rounded-lg font-semibold flex items-center gap-3 transition ${
+                activeTab === "projects" ? "bg-[#16a249] text-white shadow-md" : "text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              <FolderOpen size={20} />
+              Projects
+            </button>
+            
+            <button
+              onClick={() => setActiveTab("heatmap")}
+              className={`w-full text-left p-3 rounded-lg font-semibold flex items-center gap-3 transition ${
+                activeTab === "heatmap" ? "bg-[#16a249] text-white shadow-md" : "text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              <Map size={20} />
+              Heatmap
+            </button>
+          </div>
 
-        <button
-          onClick={() => setActiveTab("projects")}
-          className={`group relative px-6 py-3 font-semibold text-black hover:bg-gray-100 transition-all duration-200 flex items-center gap-2 rounded-lg ${
-            activeTab === "projects" ? "bg-black text-white shadow-lg" : ""
-          }`}
-        >
-          <FolderOpen className="w-5 h-5" />
-          Projects
-        </button>
-
-        <button
-          onClick={() => setActiveTab("heatmap")}
-          className={`group relative px-6 py-3 font-semibold text-black hover:bg-gray-100 transition-all duration-200 flex items-center gap-2 rounded-lg ${
-            activeTab === "heatmap" ? "bg-black text-white shadow-lg" : ""
-          }`}
-        >
-          <Map className="w-5 h-5" />
-          Heatmap
-        </button>
-
-        {/* 🔥 ORIGINAL NAVIGATION BUTTONS (PRESERVED) */}
-        <button
-          onClick={() => navigate("/officer/verification")}
-          className="group relative px-6 py-3 font-semibold text-black hover:bg-gray-100 transition-all duration-200 flex items-center gap-2 rounded-lg ml-auto"
-        >
-          <Shield className="w-5 h-5" />
-          Verification
-        </button>
+                  </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-8 py-8">
-        {renderTabContent()}
+      {/* MAIN CONTENT AREA */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* HEADER */}
+        <header className="sticky top-0 z-50 flex h-16 items-center justify-between gap-4 border-b bg-white px-4 lg:px-6 shadow-sm">
+          <div className="flex items-center gap-4">
+            {/* Menu Toggle Button */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-300"
+            >
+              {sidebarOpen ? (
+                <ChevronLeft className="h-5 w-5 text-gray-700" />
+              ) : (
+                <Menu className="h-5 w-5 text-gray-700" />
+              )}
+            </button>
+            
+            {/* Logo Section */}
+            <div className="hidden md:flex items-center gap-2 bg-[#16a249]/10 px-3 py-1.5 rounded-md">
+              <img 
+                src={CoatOfArms} 
+                alt="Government of India" 
+                className="h-8 w-8 object-contain"
+              />
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-[#16a249]">PMAGY</span>
+                <span className="text-[10px] text-gray-600 leading-tight">Adarsh Gram Component</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Last Login */}
+            <div className="hidden sm:flex items-center gap-2 text-xs text-gray-600">
+              <Clock className="h-3.5 w-3.5" />
+              <span>Last Login: {lastLogin || "03-04-2024 2:40 pm"}</span>
+            </div>
+
+            {/* Language Selector */}
+            <div className="relative dropdown-container">
+              <button
+                onClick={() => {
+                  setShowLanguageDropdown(!showLanguageDropdown);
+                  setShowUserDropdown(false);
+                }}
+                className="flex items-center gap-1.5 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition text-sm bg-white"
+              >
+                <Globe className="h-4 w-4 text-gray-600" />
+                <span className="hidden sm:inline text-gray-700">{language}</span>
+                <ChevronDown className="h-3.5 w-3.5 text-gray-600" />
+              </button>
+              {showLanguageDropdown && (
+                <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                  <button
+                    onClick={() => {
+                      setLanguage("English");
+                      setShowLanguageDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLanguage("हिंदी");
+                      setShowLanguageDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                  >
+                    हिंदी
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* User Menu */}
+            <div className="relative dropdown-container">
+              <button
+                onClick={() => {
+                  setShowUserDropdown(!showUserDropdown);
+                  setShowLanguageDropdown(false);
+                }}
+                className="flex items-center gap-2 px-2 sm:px-3 py-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#16a249] text-white">
+                  <User className="h-4 w-4" />
+                </div>
+                <div className="hidden md:flex flex-col items-start">
+                  <span className="text-sm font-medium leading-tight text-gray-900">
+                    {userData?.fullName || "Nodal Officer"}
+                  </span>
+                  <span className="text-[10px] text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
+                    {selectedLocation}
+                  </span>
+                </div>
+                <ChevronDown className="h-4 w-4 text-gray-600 hidden sm:block" />
+              </button>
+              {showUserDropdown && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                  <div className="px-2 py-1.5 md:hidden border-b border-gray-200">
+                    <p className="text-sm font-medium text-gray-900">{userData?.fullName || "Nodal Officer"}</p>
+                    <p className="text-xs text-gray-600">{selectedLocation}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      // Handle profile update
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Update Profile
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      // Handle password change
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"
+                  >
+                    <Key className="h-4 w-4" />
+                    Change Password
+                  </button>
+                  <div className="border-t border-gray-200 my-1"></div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-red-600 flex items-center gap-2"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* MAIN CONTENT */}
+        <main className="flex-1 overflow-auto bg-gray-50/30">
+          <div className="p-8">
+            {renderTabContent()}
+          </div>
+        </main>
+
+        {/* FOOTER */}
+        <footer className="border-t bg-red-600 py-2 px-4 text-center">
+          <div className="bg-black text-white py-1 px-4">
+            <p className="text-xs">
+              Technical Support: <span className="font-medium">support[dot]pmagy-msje[at]gov[dot]in</span>
+            </p>
+          </div>
+        </footer>
       </div>
     </div>
   );
