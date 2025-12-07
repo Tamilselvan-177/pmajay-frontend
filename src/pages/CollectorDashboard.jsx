@@ -114,7 +114,7 @@ const CollectorDashboard = () => {
       if (schemeId) payload.schemeId = schemeId;
 
       const res = await api.put(`/api/projects/collector/request/${selectedProject._id}/scheme`, payload);
-      
+
       if (res.data.success) {
         alert(`✅ ${res.data.message}`);
         setShowSchemeModal(false);
@@ -243,8 +243,7 @@ const CollectorDashboard = () => {
           <NavLink
             to="/collector"
             className={({ isActive }) =>
-              `w-full block p-3 rounded-lg font-semibold flex items-center gap-2 transition ${
-                isActive ? "bg-black text-white shadow-md" : "text-black hover:bg-gray-100"
+              `w-full block p-3 rounded-lg font-semibold flex items-center gap-2 transition ${isActive ? "bg-black text-white shadow-md" : "text-black hover:bg-gray-100"
               }`
             }
             end
@@ -255,8 +254,7 @@ const CollectorDashboard = () => {
           <NavLink
             to="/collector/verification"
             className={({ isActive }) =>
-              `w-full block p-3 rounded-lg font-semibold flex items-center gap-3 transition ${
-                isActive ? "bg-black text-white shadow-md" : "text-black hover:bg-gray-100"
+              `w-full block p-3 rounded-lg font-semibold flex items-center gap-3 transition ${isActive ? "bg-black text-white shadow-md" : "text-black hover:bg-gray-100"
               }`
             }
           >
@@ -266,8 +264,7 @@ const CollectorDashboard = () => {
           <NavLink
             to="/collector/verification/map"
             className={({ isActive }) =>
-              `w-full block p-3 rounded-lg font-semibold flex items-center gap-3 transition ${
-                isActive ? "bg-black text-white shadow-md" : "text-black hover:bg-gray-100"
+              `w-full block p-3 rounded-lg font-semibold flex items-center gap-3 transition ${isActive ? "bg-black text-white shadow-md" : "text-black hover:bg-gray-100"
               }`
             }
           >
@@ -281,9 +278,8 @@ const CollectorDashboard = () => {
         <div className="mb-4">
           <button
             onClick={() => setSelectedOfficer(null)}
-            className={`w-full p-3 rounded-lg mb-2 font-semibold ${
-              !selectedOfficer ? "bg-black text-white" : "bg-gray-100 text-black"
-            }`}
+            className={`w-full p-3 rounded-lg mb-2 font-semibold ${!selectedOfficer ? "bg-black text-white" : "bg-gray-100 text-black"
+              }`}
           >
             All Officers
           </button>
@@ -294,9 +290,8 @@ const CollectorDashboard = () => {
           <button
             key={off._id}
             onClick={() => setSelectedOfficer(off._id)}
-            className={`w-full flex items-center justify-between p-3 rounded-lg border mb-2 ${
-              selectedOfficer === off._id ? "bg-gray-100 border-black" : "hover:bg-gray-50 border-gray-300"
-            }`}
+            className={`w-full flex items-center justify-between p-3 rounded-lg border mb-2 ${selectedOfficer === off._id ? "bg-gray-100 border-black" : "hover:bg-gray-50 border-gray-300"
+              }`}
           >
             <div className="flex items-center gap-3">
               <Home className="text-black" />
@@ -318,7 +313,6 @@ const CollectorDashboard = () => {
         </div>
 
         <div className="p-8 overflow-auto h-[calc(100vh-140px)] bg-white text-black">
-<<<<<<< HEAD
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-3 text-black">Gap Identification</h2>
             {heatmapLoading ? (
@@ -358,9 +352,7 @@ const CollectorDashboard = () => {
               </div>
             )}
           </div>
-          <h1 className="text-3xl font-bold mb-4">Project Requests</h1>
-=======
->>>>>>> 089cd8712d93245cf71483d40974a9ae83b99492
+
 
           {/* Filters */}
           <div className="flex gap-4 mb-6">
@@ -400,9 +392,8 @@ const CollectorDashboard = () => {
                   <div
                     key={project._id}
                     onClick={() => setSelectedProject(project)}
-                    className={`bg-white p-6 border-2 rounded-xl shadow-sm hover:shadow-md cursor-pointer transition-all ${
-                      selectedProject?._id === project._id ? "border-black ring-2 ring-black/20" : "border-gray-300"
-                    }`}
+                    className={`bg-white p-6 border-2 rounded-xl shadow-sm hover:shadow-md cursor-pointer transition-all ${selectedProject?._id === project._id ? "border-black ring-2 ring-black/20" : "border-gray-300"
+                      }`}
                   >
                     <div className="flex justify-between items-start mb-3">
                       <h2 className="text-xl font-bold text-black">{project.projectName}</h2>
@@ -632,7 +623,7 @@ const CollectorDashboard = () => {
                         {selectedProject.assignedScheme ? "✏️ Edit Scheme" : "➕ Assign Scheme"}
                       </h2>
                       <p className="text-gray-600 text-lg">
-                        Project: <span className="font-bold text-black">{selectedProject.projectName}</span> | 
+                        Project: <span className="font-bold text-black">{selectedProject.projectName}</span> |
                         Budget: ₹{selectedProject.budget?.toLocaleString()}
                       </p>
                     </div>
@@ -738,60 +729,55 @@ const CollectorDashboard = () => {
                       {filteredSchemes.map((scheme) => {
                         const isCurrent = selectedProject.assignedScheme?._id === scheme._id;
                         const isSuitable = scheme.budgetLimitNum >= selectedProject.budget;
-                        
+
                         return (
                           <div
                             key={scheme._id}
-                            className={`group p-8 border-4 rounded-3xl hover:shadow-3xl transition-all cursor-pointer overflow-hidden hover:-translate-y-2 bg-gradient-to-br ${
-                              isCurrent 
-                                ? "from-green-50 to-emerald-50 border-green-400 shadow-2xl ring-8 ring-green-100/50" 
-                                : isSuitable 
-                                ? "from-white to-gray-50 border-gray-200 hover:border-black/50 shadow-xl" 
-                                : "from-orange-50 to-red-50 border-orange-300 shadow-lg opacity-90"
-                            }`}
+                            className={`group p-8 border-4 rounded-3xl hover:shadow-3xl transition-all cursor-pointer overflow-hidden hover:-translate-y-2 bg-gradient-to-br ${isCurrent
+                                ? "from-green-50 to-emerald-50 border-green-400 shadow-2xl ring-8 ring-green-100/50"
+                                : isSuitable
+                                  ? "from-white to-gray-50 border-gray-200 hover:border-black/50 shadow-xl"
+                                  : "from-orange-50 to-red-50 border-orange-300 shadow-lg opacity-90"
+                              }`}
                             onClick={() => handleCollectorSchemeAction("assign", scheme._id)}
                           >
-                            <div className={`w-full h-4 rounded-2xl mb-8 shadow-inner ${
-                              isSuitable ? "bg-gradient-to-r from-green-400 to-emerald-500" : "bg-gradient-to-r from-orange-400 to-red-500"
-                            }`} />
-                            
+                            <div className={`w-full h-4 rounded-2xl mb-8 shadow-inner ${isSuitable ? "bg-gradient-to-r from-green-400 to-emerald-500" : "bg-gradient-to-r from-orange-400 to-red-500"
+                              }`} />
+
                             <div className="flex items-start justify-between mb-6">
                               <h4 className="font-black text-2xl text-black group-hover:text-gray-900 line-clamp-2 pr-8 flex-1 leading-tight">
                                 {scheme.schemeName}
                               </h4>
-                              <div className={`px-6 py-3 rounded-2xl text-lg font-black shadow-lg ${
-                                isCurrent 
-                                  ? "bg-green-600 text-white shadow-green-500/50" 
-                                  : isSuitable 
-                                  ? "bg-emerald-500 text-white shadow-emerald-500/50" 
-                                  : "bg-orange-500 text-white shadow-orange-500/50"
-                              }`}>
+                              <div className={`px-6 py-3 rounded-2xl text-lg font-black shadow-lg ${isCurrent
+                                  ? "bg-green-600 text-white shadow-green-500/50"
+                                  : isSuitable
+                                    ? "bg-emerald-500 text-white shadow-emerald-500/50"
+                                    : "bg-orange-500 text-white shadow-orange-500/50"
+                                }`}>
                                 {isCurrent ? "✅ CURRENT" : isSuitable ? "✅ FITS" : "⚠️ LOW"}
                               </div>
                             </div>
-                            
+
                             <p className="text-gray-700 mb-8 text-lg leading-relaxed line-clamp-4 bg-white/60 p-5 rounded-2xl shadow-sm border backdrop-blur-sm">
                               {scheme.description}
                             </p>
-                            
+
                             <div className="pt-8 border-t-4 border-gray-100">
                               <div className="flex justify-between items-center mb-8">
                                 <span className="text-xl font-bold text-gray-600 uppercase tracking-wider">Max Budget</span>
-                                <span className={`text-3xl font-black ${
-                                  isSuitable ? "text-emerald-700 drop-shadow-lg" : "text-orange-700 drop-shadow-lg"
-                                }`}>
+                                <span className={`text-3xl font-black ${isSuitable ? "text-emerald-700 drop-shadow-lg" : "text-orange-700 drop-shadow-lg"
+                                  }`}>
                                   ₹{scheme.budgetLimit}
                                 </span>
                               </div>
-                              <button 
+                              <button
                                 disabled={!isSuitable}
-                                className={`w-full py-6 px-8 rounded-3xl font-black text-xl flex items-center justify-center gap-4 shadow-2xl hover:shadow-4xl transition-all backdrop-blur-md ${
-                                  isCurrent 
-                                    ? "bg-green-600 hover:bg-green-700 text-white" 
-                                    : isSuitable 
-                                    ? "bg-gradient-to-r from-black to-gray-900 hover:from-gray-900 hover:to-black text-white" 
-                                    : "bg-gradient-to-r from-gray-400 to-gray-500 text-white cursor-not-allowed"
-                                }`}
+                                className={`w-full py-6 px-8 rounded-3xl font-black text-xl flex items-center justify-center gap-4 shadow-2xl hover:shadow-4xl transition-all backdrop-blur-md ${isCurrent
+                                    ? "bg-green-600 hover:bg-green-700 text-white"
+                                    : isSuitable
+                                      ? "bg-gradient-to-r from-black to-gray-900 hover:from-gray-900 hover:to-black text-white"
+                                      : "bg-gradient-to-r from-gray-400 to-gray-500 text-white cursor-not-allowed"
+                                  }`}
                               >
                                 {isCurrent ? (
                                   <>
@@ -862,11 +848,10 @@ const CollectorDashboard = () => {
                   </button>
                   <button
                     onClick={actionType === "approve" ? handleApprove : handleReject}
-                    className={`flex-1 py-4 rounded-xl font-bold shadow-xl transition-all ${
-                      actionType === "approve"
+                    className={`flex-1 py-4 rounded-xl font-bold shadow-xl transition-all ${actionType === "approve"
                         ? "bg-green-600 hover:bg-green-700 text-white"
                         : "bg-red-600 hover:bg-red-700 text-white"
-                    }`}
+                      }`}
                   >
                     {actionType === "approve" ? "✅ Approve Project" : "❌ Reject Project"}
                   </button>
