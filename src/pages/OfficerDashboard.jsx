@@ -18,8 +18,9 @@ const OfficerDashboard = () => {
   const [showSchemeModal, setShowSchemeModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [formData, setFormData] = useState({
-    projectName: "", budget: "", description: "", documentType: "supporting", category: "general"
+    projectName: "", budget: "", description: "", documentType: "supporting", category: "general", villageId: ""
   });
+  const [officerVillages, setOfficerVillages] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [formLoading, setFormLoading] = useState(false);
   const [schemes, setSchemes] = useState([]);
@@ -45,6 +46,15 @@ const OfficerDashboard = () => {
       console.error("Error loading requests:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOfficerVillages = async () => {
+    try {
+      const res = await api.get("/api/projects/officer/villages");
+      setOfficerVillages(res.data.villages || []);
+    } catch (err) {
+      console.error("Error loading officer villages:", err);
     }
   };
 
@@ -127,7 +137,10 @@ const OfficerDashboard = () => {
     if (activeTab === "dashboard" || activeTab === "heatmap") {
       fetchDashboardData();
     }
-  }, [activeTab]);
+    if (showCreateForm) {
+      fetchOfficerVillages();
+    }
+  }, [activeTab, showCreateForm]);
 
   // 🔥 ALL EXISTING UTILITY FUNCTIONS (UNCHANGED)
   const formatBudget = (amount) =>
@@ -159,6 +172,12 @@ const OfficerDashboard = () => {
       formDataToSend.append("budget", formData.budget);
       formDataToSend.append("description", formData.description);
       formDataToSend.append("documentType", formData.documentType);
+      if (!formData.villageId) {
+        alert("Please select a village");
+        setFormLoading(false);
+        return;
+      }
+      formDataToSend.append("villageId", formData.villageId);
       selectedFiles.forEach(file => formDataToSend.append("documents", file));
       
       const res = await api.post("/api/projects/request", formDataToSend);
@@ -694,6 +713,25 @@ const OfficerDashboard = () => {
 
                   <form onSubmit={handleSubmit} className="p-6">
                     <div className="space-y-5">
+                      {/* Village Selection */}
+                      <div>
+                        <label className="block text-sm font-bold text-black mb-2">
+                          Village *
+                        </label>
+                        <select
+                          required
+                          value={formData.villageId}
+                          onChange={(e) => setFormData({ ...formData, villageId: e.target.value })}
+                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-black focus:outline-none text-black"
+                        >
+                          <option value="">Select Village</option>
+                          {officerVillages.map(v => (
+                            <option key={v._id} value={v._id}>
+                              {v.name} {v.block ? `• ${v.block}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       {/* Project Category */}
                       <div>
                         <label className="block text-sm font-bold text-black mb-2">
@@ -855,7 +893,7 @@ const OfficerDashboard = () => {
                         </select>
                       </div>
                       
-                      <div>
+                      {/* <div>
                         <label className="block text-sm font-bold text-black mb-2">Budget Filter</label>
                         <input
                           type="number"
@@ -868,7 +906,7 @@ const OfficerDashboard = () => {
                           placeholder="5000000"
                         />
                       </div>
-                      
+                       */}
                       <div className="flex items-end">
                         <button
                           onClick={() => fetchFilteredSchemes(schemeFilters.category, schemeFilters.budget)}

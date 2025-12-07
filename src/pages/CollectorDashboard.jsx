@@ -24,6 +24,9 @@ const CollectorDashboard = () => {
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [schemeFilters, setSchemeFilters] = useState({ category: "", budget: "" });
   const [schemeSearch, setSchemeSearch] = useState("");
+  const [dashboardData, setDashboardData] = useState(null);
+  const [heatmapLoading, setHeatmapLoading] = useState(false);
+  const [gapInsights, setGapInsights] = useState([]);
   const navigate = useNavigate();
 
   const fetchOfficers = async () => {
@@ -61,6 +64,46 @@ const CollectorDashboard = () => {
     } catch (err) {
       console.error("Error loading schemes:", err);
       setSchemes([]);
+    }
+  };
+
+  const fetchCollectorHeatmap = async () => {
+    try {
+      setHeatmapLoading(true);
+      const res = await api.get("/api/dashboard/heatmap");
+      setDashboardData(res.data);
+
+      const priorityVillages = res.data.heatmapData
+        ?.filter(v => v.color === "red" || v.color === "yellow")
+        ?.slice(0, 6) || [];
+
+      const insights = priorityVillages.map(v => {
+        const gaps = Object.entries(v.readiness?.domainScores || {})
+          .filter(([_, d]) => d.percentage < 50)
+          .sort((a, b) => b[1].gap - a[1].gap)
+          .slice(0, 3)
+          .map(([key, d]) => ({
+            domain: key,
+            gapPercent: 100 - d.percentage,
+            cost: Math.round(d.gap * 50000)
+          }));
+
+        const totalCost = gaps.reduce((sum, g) => sum + g.cost, 0);
+        return {
+          villageName: v.villageName,
+          color: v.color,
+          readiness: v.readiness?.overallReadiness || 0,
+          priority: v.priority,
+          gaps,
+          totalCost
+        };
+      });
+
+      setGapInsights(insights);
+    } catch (err) {
+      console.error("Error loading collector heatmap:", err);
+    } finally {
+      setHeatmapLoading(false);
     }
   };
 
@@ -138,6 +181,7 @@ const CollectorDashboard = () => {
     fetchOfficers();
     fetchProjects();
     fetchFilteredSchemes();
+    fetchCollectorHeatmap();
   }, []);
 
   const filteredProjects = projects.filter((project) => {
@@ -307,6 +351,45 @@ const CollectorDashboard = () => {
         </div>
 
         <div className="p-8 overflow-auto h-[calc(100vh-140px)] bg-white text-black">
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-3 text-black">Gap Identification</h2>
+            {heatmapLoading ? (
+              <div className="p-8 border-2 border-dashed border-gray-300 rounded-xl text-center">
+                <p className="text-gray-700">Loading gap insights...</p>
+              </div>
+            ) : gapInsights.length === 0 ? (
+              <div className="p-8 border-2 border-dashed border-gray-300 rounded-xl text-center">
+                <p className="text-gray-700">No critical gaps identified</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {gapInsights.map((item, idx) => (
+                  <div key={idx} className="p-6 border-2 border-gray-200 rounded-2xl hover:shadow-lg transition bg-white">
+                    <div className="flex items-start justify-between mb-4">
+                      <h4 className="font-bold text-lg text-black">{item.villageName}</h4>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${item.color === 'red' ? 'bg-red-100 text-red-800' : item.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>{(item.priority || 'unknown').toUpperCase()}</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm text-gray-700">Readiness</span>
+                      <span className="font-bold text-black">{item.readiness}%</span>
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      {item.gaps.map((g, i) => (
+                        <div key={i} className="flex items-center justify-between text-sm">
+                          <span className="text-gray-800">{g.domain.replace(/([A-Z])/g, ' $1').trim()}</span>
+                          <span className="font-semibold text-red-700">-{Math.round(g.gapPercent)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                      <span className="text-sm text-gray-700">Estimated Budget</span>
+                      <span className="font-bold text-black">₹{item.totalCost.toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <h1 className="text-3xl font-bold mb-4">Project Requests</h1>
 
           {/* Filters */}
