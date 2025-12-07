@@ -27,7 +27,7 @@ const mockData = {
       count: '5,321',
       change: '+120 villages onboarded this quarter',
       icon: MapPin,
-      accentClass: 'bg-blue-900',
+      accentClass: 'bg-green-800',
     },
     {
       title: 'VDP Planned',
@@ -48,7 +48,7 @@ const mockData = {
       count: '₹ 1,542 Cr',
       change: 'Updated on 27 Nov 2025',
       icon: IndianRupee,
-      accentClass: 'bg-blue-700',
+      accentClass: 'bg-green-600',
     },
     {
       title: 'Mission Assets',
@@ -132,7 +132,7 @@ const Home = () => {
       `}</style>
 
       {/* Utility Bar */}
-      <div className="bg-blue-950 text-white text-xs">
+      <div className="bg-[#0a3a1a] text-white text-xs">
         <div className="w-full px-4 sm:px-8 lg:px-16 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="text-sm leading-snug flex items-center gap-3">
             <img src={AshokaEmblem} alt="State Emblem" className="w-10 h-10 object-contain" />
@@ -173,23 +173,23 @@ const Home = () => {
 
       {/* Branding Header */}
       <header className="bg-white border-b border-gray-200">
-        <div className="w-full px-4 sm:px-8 lg:px-16 py-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-6">
-            <img src={PmagyLogo} alt="PMAGY" className="w-36 h-36 object-contain" />
+        <div className="w-full px-4 sm:px-8 lg:px-16 py-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
+            <img src={PmagyLogo} alt="PMAGY" className="w-24 h-24 object-contain" />
             <div className="text-left">
-              <p className="text-2xl font-semibold text-gray-800 tracking-wide">Adarsh Gram Under PM-AJAY</p>
-              <p className="text-2xl text-gray-700">Department of Social Justice &amp; Empowerment</p>
-              <p className="text-xl text-gray-600">Government of India</p>
+              <p className="text-lg font-semibold text-gray-800 tracking-wide">Adarsh Gram Under PM-AJAY</p>
+              <p className="text-lg text-gray-700">Department of Social Justice &amp; Empowerment</p>
+              <p className="text-base text-gray-600">Government of India</p>
             </div>
           </div>
           <div className="flex items-center justify-end">
-            <img src={AmritLogo} alt="Azadi Ka Amrit Mahotsav" className="h-24 object-contain" />
+            <img src={AmritLogo} alt="Azadi Ka Amrit Mahotsav" className="h-16 object-contain" />
           </div>
         </div>
       </header>
 
       {/* Navigation */}
-      <nav className="bg-blue-900 text-white shadow border-b-[6px] border-red-600 sticky top-0 z-40">
+      <nav className="bg-[#1a5f2a] text-white shadow border-b-[6px] border-red-600 sticky top-0 z-40">
         <div className="w-full flex items-center justify-between px-4 sm:px-8 lg:px-16">
           <div className="hidden md:flex items-stretch text-sm font-semibold">
             {[
@@ -204,7 +204,7 @@ const Home = () => {
               <Link
                 key={item.label}
                 to={item.path}
-                className="px-5 py-4 border-r border-white/10 hover:bg-blue-800 relative"
+                className="px-5 py-4 border-r border-white/10 hover:bg-green-700 relative"
               >
                 <span>{item.label}</span>
                 {item.badge && (
@@ -224,7 +224,7 @@ const Home = () => {
           </button>
         </div>
         {mobileNavOpen && (
-          <div className="md:hidden border-t border-blue-800 bg-blue-950 px-4 py-3 space-y-2 text-sm">
+          <div className="md:hidden border-t border-green-700 bg-[#0a3a1a] px-4 py-3 space-y-2 text-sm">
             {[
               { label: 'Home', path: '/' },
               { label: 'About Scheme', path: '/about' },
@@ -273,7 +273,7 @@ const Home = () => {
               <div className="flex flex-col gap-4 animate-[ticker_16s_linear_infinite]">
                 {tickerItems.map((item, idx) => (
                   <div key={`${item.title}-${idx}`} className="border-b border-gray-100 pb-3">
-                    <p className="text-sm font-semibold text-blue-900">{item.title}</p>
+                    <p className="text-sm font-semibold text-green-800">{item.title}</p>
                     <p className="text-xs text-gray-500">Updated on {item.date}</p>
                   </div>
                 ))}
@@ -289,7 +289,7 @@ const Home = () => {
       <section className="mt-12 bg-gray-50 border-y border-gray-100 py-12">
         <div className="w-full px-4 sm:px-8 lg:px-16">
           <div className="flex flex-col gap-3 text-center mb-10">
-            <p className="text-sm uppercase tracking-[0.4em] text-blue-900">Mission Dashboard</p>
+            <p className="text-sm uppercase tracking-[0.4em] text-green-800">Mission Dashboard</p>
             <h3 className="text-3xl font-semibold text-gray-900">Key Indicators for PM-AJAY</h3>
             <p className="text-gray-500 max-w-3xl mx-auto">
               Real-time monitoring of model village development projects under the Pradhan Mantri Adarsh Gram Yojana.
@@ -305,11 +305,11 @@ const Home = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-blue-900 text-white mt-12">
+      <footer className="bg-[#1a5f2a] text-white mt-12">
         <div className="w-full px-4 sm:px-8 lg:px-16 py-10 grid gap-8 md:grid-cols-3">
           <div>
             <p className="text-lg font-semibold mb-4">Related Links</p>
-            <ul className="space-y-2 text-sm text-blue-100">
+            <ul className="space-y-2 text-sm text-green-100">
               {mockData.footerLinks.related.map((link) => (
                 <li key={link}>{link}</li>
               ))}
@@ -317,7 +317,7 @@ const Home = () => {
           </div>
           <div>
             <p className="text-lg font-semibold mb-4">Contact Information</p>
-            <ul className="space-y-2 text-sm text-blue-100">
+            <ul className="space-y-2 text-sm text-green-100">
               {mockData.footerLinks.contact.map((info) => (
                 <li key={info}>{info}</li>
               ))}
@@ -325,14 +325,14 @@ const Home = () => {
           </div>
           <div>
             <p className="text-lg font-semibold mb-4">Nodal Officer</p>
-            <ul className="space-y-2 text-sm text-blue-100">
+            <ul className="space-y-2 text-sm text-green-100">
               {mockData.footerLinks.officer.map((info) => (
                 <li key={info}>{info}</li>
               ))}
             </ul>
           </div>
         </div>
-        <div className="bg-blue-950 text-center text-xs text-blue-200 py-3">
+        <div className="bg-[#0a3a1a] text-center text-xs text-green-200 py-3">
           © {new Date().getFullYear()} Pradhan Mantri Adarsh Gram Yojana | Designed & Maintained by NIC
         </div>
       </footer>
