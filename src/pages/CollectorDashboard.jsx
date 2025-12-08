@@ -300,7 +300,7 @@ const CollectorDashboard = () => {
               <Home className="text-black" />
               <div>
                 <p className="font-bold text-black">{off.fullName}</p>
-                <p className="text-sm text-gray-700">{off.village?.name}</p>
+                <p className="text-sm text-gray-700">{off.block?.name}</p>
               </div>
             </div>
             <ChevronRight className="text-black" />

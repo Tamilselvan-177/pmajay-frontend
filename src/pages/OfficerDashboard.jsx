@@ -48,7 +48,55 @@ const OfficerDashboard = () => {
       setLoading(false);
     }
   };
+  // Add these NEW states (after existing formData)
+const [heatmapFormData, setHeatmapFormData] = useState({
+  projectName: '',
+  budget: '',
+  description: '',
+  documentType: 'supporting',
+  category: 'general',
+  villageId: ''  // This will auto-set from village
+});
+const [heatmapSelectedFiles, setHeatmapSelectedFiles] = useState([]);
+const [heatmapFormLoading, setHeatmapFormLoading] = useState(false);
 
+// NEW: Heatmap-specific submit handler
+const handleHeatmapSubmit = async (e) => {
+  e.preventDefault();
+  setHeatmapFormLoading(true);
+  try {
+    const formDataToSend = new FormData();
+    formDataToSend.append('projectName', heatmapFormData.projectName);
+    formDataToSend.append('budget', heatmapFormData.budget);
+    formDataToSend.append('description', heatmapFormData.description);
+    formDataToSend.append('documentType', heatmapFormData.documentType);
+    formDataToSend.append('villageId', heatmapFormData.villageId); // Auto-assigned
+    heatmapSelectedFiles.forEach(file => formDataToSend.append('documents', file));
+    
+    const res = await api.post('/api/projects/request', formDataToSend);
+    if (res.data.success) {
+      alert('Priority project created successfully!');
+      setShowCreateForm(false); // Close modal
+      // Reset heatmap form only
+      setHeatmapFormData({ projectName: '', budget: '', description: '', documentType: 'supporting', category: 'general', villageId: '' });
+      setHeatmapSelectedFiles([]);
+      fetchMyRequests();
+    }
+  } catch (err) {
+    alert(err.response?.data?.message || 'Failed to create project');
+  } finally {
+    setHeatmapFormLoading(false);
+  }
+};
+
+const handleHeatmapFileChange = (e) => {
+  const files = Array.from(e.target.files);
+  setHeatmapSelectedFiles(prev => [...prev, ...files]);
+};
+
+const removeHeatmapFile = (index) => {
+  setHeatmapSelectedFiles(prev => prev.filter((_, i) => i !== index));
+};
   const fetchOfficerVillages = async () => {
     try {
       const res = await api.get("/api/projects/officer/villages");
@@ -94,6 +142,7 @@ const OfficerDashboard = () => {
     setHeatmapLoading(true);
     const res = await api.get("/api/dashboard/heatmap");
     setDashboardData(res.data);
+  
     
     const priorityVillages = res.data.heatmapData
       ?.filter(v => v.color === "red" || v.color === "yellow")
@@ -125,8 +174,9 @@ const OfficerDashboard = () => {
   const fetchVillageDetails = async (villageId) => {
     try {
       const res = await api.get(`/api/dashboard/village/${villageId}`);
-      setVillageDetails(res.data);
-    } catch (err) {
+            setVillageDetails(res.data);
+
+      } catch (err) {
       console.error("Error loading village details:", err);
     }
   };
@@ -410,13 +460,19 @@ const OfficerDashboard = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-4 pt-6 border-t border-gray-200">
-          <button 
-            onClick={() => navigate(`/officer/project/new?priorityVillage=${village.village?._id}`)}
-            className="bg-black text-white px-8 py-4 rounded-2xl font-bold hover:bg-gray-900 transition flex items-center gap-3 text-lg"
-          >
-            <Plus className="w-5 h-5" />
-            Create Priority Project
-          </button>
+{selectedVillage && (
+  <button 
+    onClick={() => {
+      setHeatmapFormData(prev => ({ ...prev, villageId: selectedVillage.village?.id })); // Auto-assign
+      setShowCreateForm(true);
+    }}
+    className="bg-black text-white px-8 py-4 rounded-2xl font-bold hover:bg-gray-900 transition flex items-center gap-3 text-lg"
+  >
+    <Plus className="w-5 h-5" />
+    Create Priority Project
+  </button>
+)}
+
           <button className="border-2 border-black text-black px-8 py-4 rounded-2xl font-bold hover:bg-black hover:text-white transition flex items-center gap-3 text-lg">
             <FileText className="w-5 h-5" />
             Export Report
@@ -502,7 +558,7 @@ const OfficerDashboard = () => {
 
       <div className="mt-6 pt-4 border-t border-gray-200">
         <button
-          onClick={() => navigate(`/officer/project/${request._id}/work-packages`)}
+          onClick={() => navigate(`/officer/project/${request._id}`)}
           className="w-full bg-black hover:bg-gray-900 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all"
         >
           <Eye className="w-4 h-4" />
@@ -643,27 +699,71 @@ const OfficerDashboard = () => {
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-3xl font-bold text-black flex items-center gap-3">
                   <MapPin className="w-10 h-10" />
-                  Village Heatmap ({dashboardData?.stats?.totalVillages} villages)
+                  Village Heatmap ({priorityProjects.length} projects)
                 </h2>
                 <button 
                   onClick={() => setActiveTab("dashboard")}
                   className="bg-black text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-900 flex items-center gap-2"
                 >
                   Dashboard View
+
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {dashboardData?.heatmapData?.map((village) => (
-                  <VillageCard 
-                    key={village.village} 
-                    village={village} 
-                    onClick={() => {
-                      setSelectedVillage(village);
-                      fetchVillageDetails(village.village);
-                    }}
-                  />
-                ))}
-              </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {/* 1️⃣ PRIORITY PROJECT VILLAGES */}
+  {dashboardData?.heatmapData?.map((village) => {
+    const isPriorityProject = priorityProjects.some(project => 
+      project.villageName === village.villageName || 
+      project.villageId === village.village ||
+      project.id === village.village
+    );
+    
+    if (!isPriorityProject) return null;
+    
+    return (
+      <VillageCard 
+        key={`priority-${village.village}`} 
+        village={village} 
+        onClick={() => {
+          setSelectedVillage(village);
+          fetchVillageDetails(village.village);
+        }}
+      />
+    );
+  })}
+
+  {/* 2️⃣ SEPARATOR */}
+  {priorityProjects.length > 0 && (
+    <div className="col-span-full">
+      <div className="h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent my-12"></div>
+      <h3 className="text-xl font-bold text-gray-800 text-center mb-8 col-span-full">
+        Remaining Villages
+      </h3>
+    </div>
+  )}
+
+  {/* 3️⃣ REMAINING VILLAGES */}
+  {dashboardData?.heatmapData
+    ?.filter((village) => {
+      return !priorityProjects.some(project => 
+        project.villageName === village.villageName || 
+        project.villageId === village.village ||
+        project.id === village.village
+      );
+    })
+    .map((village) => (
+      <VillageCard 
+        key={`remaining-${village.village}`} 
+        village={village} 
+        onClick={() => {
+          setSelectedVillage(village);
+          fetchVillageDetails(village.village);
+        }}
+      />
+    ))}
+</div>
+
+
             </div>
 
             {/* Village Details Modal */}
@@ -1101,17 +1201,29 @@ const OfficerDashboard = () => {
           <Map className="w-5 h-5" />
           Heatmap
         </button>
-
+    <button
+          onClick={() => navigate('/officer/village-selection')}
+          className={`group relative px-6 py-3 font-semibold text-black hover:bg-gray-100 transition-all duration-200 flex items-center gap-2 rounded-lg ${
+            activeTab === "heatmap" ? "bg-black text-white shadow-lg" : ""
+          }`}
+        >
+          <Map className="w-5 h-5" />
+          select village
+        </button>
         {/* 🔥 ORIGINAL NAVIGATION BUTTONS (PRESERVED) */}
-     <button 
+     {/* <button 
     onClick={() => navigate('/officer/verification/map')}
     className="group relative px-6 py-3 font-semibold text-black hover:bg-gray-100 transition-all duration-200 flex items-center gap-2 rounded-lg ml-auto"
   >
     <MapPin className="w-5 h-5" />
     District Map
   </button>
+   */}
+  
 </div>
      {/* <><><>>>><>>>><><><><</></></> */}
+
+     
 
       <div className="max-w-7xl mx-auto px-8 py-8">
         {renderTabContent()}

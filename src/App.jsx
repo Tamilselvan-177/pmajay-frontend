@@ -18,6 +18,7 @@ import CollectorVerificationPage from './pages/CollectorVerificationPage';
 import CollectorGeospatialMap from './pages/CollectorGeospatialMap.jsx';
 import OfficerGeospatialMap from './pages/OfficerGeospatialMap.jsx';
 import Home from './pages/Home';
+import OfficerVillageSelection from './pages/OfficerVillageSelection';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/officer/village-selection" element={<OfficerVillageSelection />} />
 
         {/* Officer (Block/District Officer) Routes */}
         <Route
@@ -37,7 +39,7 @@ function App() {
           }
         />
         <Route
-          path="/officer/project/:projectId/work-packages"
+          path="/officer/project/:projectId/"
           element={
             <PrivateRoute allowedRoles={["officer"]}>
               <DocumentReview />
