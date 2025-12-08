@@ -1103,14 +1103,15 @@ const OfficerDashboard = () => {
         </button>
 
         {/* 🔥 ORIGINAL NAVIGATION BUTTONS (PRESERVED) */}
-        <button
-          onClick={() => navigate("/officer/verification")}
-          className="group relative px-6 py-3 font-semibold text-black hover:bg-gray-100 transition-all duration-200 flex items-center gap-2 rounded-lg ml-auto"
-        >
-          <Shield className="w-5 h-5" />
-          Verification
-        </button>
-      </div>
+     <button 
+    onClick={() => navigate('/officer/verification/map')}
+    className="group relative px-6 py-3 font-semibold text-black hover:bg-gray-100 transition-all duration-200 flex items-center gap-2 rounded-lg ml-auto"
+  >
+    <MapPin className="w-5 h-5" />
+    District Map
+  </button>
+</div>
+     {/* <><><>>>><>>>><><><><</></></> */}
 
       <div className="max-w-7xl mx-auto px-8 py-8">
         {renderTabContent()}

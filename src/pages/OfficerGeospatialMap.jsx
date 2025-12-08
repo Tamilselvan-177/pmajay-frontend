@@ -1,4 +1,4 @@
-// OfficerGeospatialMap.jsx - YOUR EXACT ORIGINAL DESIGN + PRIORITY HEATMAP
+// OfficerGeospatialMap.jsx - COMPLETE WITH PRIORITY HEATMAP
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker } from 'react-leaflet';
@@ -25,8 +25,7 @@ const createCustomIcon = (color, icon, size = 36) => {
   return L.divIcon({
     html: `
       <div style="
-        background: linear-gradient(135deg, ${color}, ${color}
-        dd);
+        background: linear-gradient(135deg, ${color}, ${color}dd);
         width: ${size}px; height: ${size}px; 
         border-radius: 50%; 
         display: flex; 
@@ -56,7 +55,7 @@ const OfficerGeospatialMap = () => {
   const [loading, setLoading] = useState(true);
   const [mapType, setMapType] = useState('street');
 
-  // Drishti Heatmap States
+  // 🔥 HEATMAP STATES (NEW)
   const [heatmapData, setHeatmapData] = useState([]);
   const [stats, setStats] = useState({});
   const [showPriorityLayer, setShowPriorityLayer] = useState(true);
@@ -108,16 +107,25 @@ const OfficerGeospatialMap = () => {
     }
   };
 
+  // 🔥 HEATMAP DATA FETCH (NEW)
   const fetchDashboardHeatmap = async () => {
     try {
       const response = await api.get('/api/dashboard/heatmap');
       if (response.data.success) {
         setHeatmapData(response.data.heatmapData);
         setStats(response.data.stats);
+        console.log('✅ Heatmap loaded:', response.data.heatmapData.length, 'villages');
       }
     } catch (error) {
       console.error('Error fetching heatmap data:', error);
     }
+  };
+
+  // 🔥 HEATMAP COLOR HELPER (NEW)
+  const getHeatmapColor = (color) => {
+    return color === 'red' ? '#ef4444' : 
+           color === 'yellow' ? '#f59e0b' : 
+           color === 'green' ? '#10b981' : '#6b7280';
   };
 
   const getSchemeColor = (schemeName) => {
@@ -225,7 +233,7 @@ const OfficerGeospatialMap = () => {
             </p>
           </div>
           {/* Right Controls */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
             <button
               onClick={() => navigate('/officer/verification')}
               className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
@@ -233,7 +241,7 @@ const OfficerGeospatialMap = () => {
               <ArrowLeft size={20} />
               Back
             </button>
-            {/* Search Bar (UI only) */}
+            {/* Search Bar */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
@@ -250,6 +258,21 @@ const OfficerGeospatialMap = () => {
               <RefreshCw className="w-4 h-4" />
               <span>Refresh</span>
             </button>
+            
+            {/* 🔥 PRIORITY LAYER TOGGLE (NEW) */}
+            <button
+              onClick={() => setShowPriorityLayer(!showPriorityLayer)}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition ${
+                showPriorityLayer 
+                  ? 'bg-orange-600 text-white shadow-lg' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              title="Toggle Village Priority Heatmap"
+            >
+              <BarChart3 size={18} />
+              <span>{showPriorityLayer ? 'Hide' : 'Show'} Priority</span>
+            </button>
+
             <button className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
               <Download className="w-4 h-4" />
               <span>Export</span>
@@ -271,12 +294,116 @@ const OfficerGeospatialMap = () => {
       {/* Map Container */}
       <div className="w-full h-full pt-20">
         <MapContainer
-          center={[20.5937, 78.9629]}
+          center={[12.97, 79.39]} // Kanchipuram area
           zoom={11}
           className="w-full h-full"
         >
           <TileLayer url={getTileLayerUrl()} />
-          {/* Project Markers */}
+
+          {/* 🔥 PRIORITY HEATMAP LAYER (NEW) */}
+          {showPriorityLayer && heatmapData.map((village, index) => {
+            const { lat = 12.97, lng = 79.39 } = village.geoLocation || {};
+            const hasValidCoords = lat && lng && !isNaN(lat) && !isNaN(lng);
+
+            if (!hasValidCoords) return null;
+
+            return (
+              <CircleMarker
+                key={`heatmap-${village.village || index}`}
+                center={[lat, lng]}
+                radius={Math.max(8, (village.surveys || 0) / 3)} // Size by survey count
+                fillColor={getHeatmapColor(village.color)}
+                color="#ffffff"
+                weight={4}
+                opacity={0.9}
+                fillOpacity={0.7}
+                zIndexOffset={500}
+              >
+                <Popup className="custom-popup" maxWidth={450}>
+                  <div className="p-6 bg-white min-w-[380px]">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-bold text-gray-800">
+                        🏘️ {village.villageName}
+                      </h3>
+                      <div className={`px-4 py-2 rounded-full text-sm font-bold text-white shadow-lg ${
+                        village.color === 'red' ? 'bg-red-500' :
+                        village.color === 'yellow' ? 'bg-yellow-500 text-black' :
+                        village.color === 'green' ? 'bg-green-500' : 'bg-gray-500'
+                      }`}>
+                        {village.color?.toUpperCase() || 'GRAY'}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-6 mb-6">
+                      <div>
+                        <div className="text-3xl font-bold text-gray-800">
+                          {village.readiness?.overallReadiness || 0}%
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">Readiness Score</div>
+                      </div>
+                      <div>
+                        <div className="text-3xl font-bold text-blue-600">
+                          {village.surveys || 0}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">Households Surveyed</div>
+                      </div>
+                    </div>
+
+                    <div className="mb-6">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-semibold text-gray-700">Priority Level</span>
+                        <span className="text-sm font-bold capitalize text-gray-800">
+                          {village.priority || 'unknown'}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-4">
+                        <div
+                          className="h-4 rounded-full shadow-lg"
+                          style={{ 
+                            width: `${village.readiness?.overallReadiness || 0}%`,
+                            backgroundColor: getHeatmapColor(village.color)
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4 mb-6 p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl">
+                      <div>
+                        <div className="text-sm text-gray-600 mb-1">SC Population</div>
+                        <div className="text-lg font-bold text-gray-800">
+                          {village.scPopulation?.toLocaleString() || 0}
+                        </div>
+                      </div>
+                      {village.topGaps?.[0] && (
+                        <>
+                          <div>
+                            <div className="text-sm text-gray-600 mb-1">Top Gap</div>
+                            <div className="text-lg font-bold text-red-600">
+                              {village.topGaps[0].domainName}
+                            </div>
+                            <div className="text-xs text-red-500">
+                              Gap: {village.topGaps[0].gapPercentage?.toFixed(0)}%
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-200">
+                      <button className="px-4 py-3 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-md">
+                        📋 Village Report
+                      </button>
+                      <button className="px-4 py-3 bg-green-600 text-white text-sm font-semibold rounded-xl hover:bg-green-700 transition-all shadow-md">
+                        📊 Domain Analysis
+                      </button>
+                    </div>
+                  </div>
+                </Popup>
+              </CircleMarker>
+            );
+          })}
+
+          {/* ORIGINAL PROJECT MARKERS (UNCHANGED) */}
           {projects.map(project => {
             const coords = project.location?.coordinates || [];
             const hasValidCoords =
@@ -406,7 +533,7 @@ const OfficerGeospatialMap = () => {
         </MapContainer>
       </div>
 
-      {/* Scheme Filter Panel */}
+      {/* Scheme Filter Panel (UNCHANGED) */}
       <div className="absolute top-24 right-4 bg-white rounded-lg shadow-xl p-4 z-[1000] max-w-xs max-h-[70vh] overflow-auto">
         <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
           <Layers size={20} />
@@ -453,42 +580,55 @@ const OfficerGeospatialMap = () => {
         </div>
       </div>
 
-      {/* Statistics Panel */}
-      <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-xl p-4 z-[1000]">
-        <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-          <Filter size={18} />
-          Statistics
+      {/* 🔥 UPDATED STATISTICS PANEL - HEATMAP STATS */}
+      <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-xl p-6 z-[1000] min-w-[280px]">
+        <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <BarChart3 size={20} />
+          Village Readiness
         </h3>
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600">{projects.length}</div>
-            <div className="text-xs text-gray-600">Total Projects</div>
+            <div className="text-3xl font-bold text-yellow-500">{stats.yellow || 0}</div>
+            <div className="text-xs text-gray-600 mt-1">🟡 Yellow</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-green-600">
-              {projects.filter(p => p.currentStatus === 'completed').length}
-            </div>
-            <div className="text-xs text-gray-600">Completed</div>
+            <div className="text-3xl font-bold text-red-500">{stats.red || 0}</div>
+            <div className="text-xs text-gray-600 mt-1">🔴 Critical</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-orange-600">
-              {projects.filter(p => p.currentStatus === 'in_progress').length}
-            </div>
-            <div className="text-xs text-gray-600">In Progress</div>
+            <div className="text-3xl font-bold text-green-500">{stats.green || 0}</div>
+            <div className="text-xs text-gray-600 mt-1">🟢 Ready</div>
           </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-red-600">
-              {projects.filter(p => p.needsVerification).length}
-            </div>
-            <div className="text-xs text-gray-600">Need Verification</div>
+          <div className="text-center border-t pt-2">
+            <div className="text-2xl font-bold text-gray-700">{stats.totalVillages || 0}</div>
+            <div className="text-xs text-gray-600">Total Villages</div>
           </div>
+        </div>
+        <div className="mt-4 pt-3 border-t text-center">
+          <div className="text-lg font-bold text-gray-800">{stats.avgReadiness || 0}%</div>
+          <div className="text-xs text-gray-500">Avg Readiness</div>
         </div>
       </div>
 
-      {/* Legend */}
+      {/* 🔥 UPDATED LEGEND - HEATMAP + PROJECTS */}
       <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-xl p-4 z-[1000] max-w-xs">
         <h3 className="font-bold text-gray-800 mb-3 text-sm">Map Legend</h3>
         <div className="space-y-2 text-sm">
+          {/* 🔥 HEATMAP LEGEND */}
+          <div className="font-semibold text-xs text-gray-700 mb-2 border-b pb-2">Village Priority</div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-red-500"></div>
+            <span>Critical (&lt;40%)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
+            <span>Moderate (40-69%)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-green-500"></div>
+            <span>Ready (70+%)</span>
+          </div>
+          <div className="font-semibold text-xs text-gray-700 mt-3 mb-1 border-t pt-2">Project Status</div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded-full bg-green-500"></div>
             <span>Completed</span>
@@ -501,14 +641,10 @@ const OfficerGeospatialMap = () => {
             <div className="w-4 h-4 rounded-full bg-orange-500"></div>
             <span>Delayed</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-gray-500"></div>
-            <span>Not Started</span>
-          </div>
         </div>
       </div>
 
-      {/* Image Modal */}
+      {/* Image Modal (UNCHANGED) */}
       {showImageModal && selectedImage && (
         <div
           className="fixed inset-0 bg-black bg-opacity-75 z-[2000] flex items-center justify-center p-4"
