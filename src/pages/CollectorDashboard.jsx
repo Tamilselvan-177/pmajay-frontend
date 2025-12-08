@@ -234,49 +234,8 @@ const CollectorDashboard = () => {
   return (
     <DashboardLayout userRole="collector">
       <div className="min-h-full bg-gray-50">
-        <div className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="px-6">
-            <div className="flex items-center gap-4 py-4">
-              <NavLink
-                to="/collector"
-                className={({ isActive }) =>
-                  `px-5 py-2.5 font-semibold rounded-lg transition flex items-center gap-2 ${
-                    isActive ? "bg-gov-green-600 text-white shadow-md" : "text-gray-700 hover:bg-gray-100"
-                  }`
-                }
-                end
-              >
-                <FileText size={18} />
-                Project Requests
-              </NavLink>
-              <NavLink
-                to="/collector/verification"
-                className={({ isActive }) =>
-                  `px-5 py-2.5 font-semibold rounded-lg transition flex items-center gap-2 ${
-                    isActive ? "bg-gov-green-600 text-white shadow-md" : "text-gray-700 hover:bg-gray-100"
-                  }`
-                }
-              >
-                <ShieldCheck size={18} />
-                Verification
-              </NavLink>
-              <NavLink
-                to="/collector/verification/map"
-                className={({ isActive }) =>
-                  `px-5 py-2.5 font-semibold rounded-lg transition flex items-center gap-2 ${
-                    isActive ? "bg-gov-green-600 text-white shadow-md" : "text-gray-700 hover:bg-gray-100"
-                  }`
-                }
-              >
-                <MapPin size={18} />
-                District Map
-              </NavLink>
-            </div>
-          </div>
-        </div>
-
         <div className="flex">
-          <div className="w-72 bg-white border-r border-gray-200 p-5 min-h-[calc(100vh-130px)] overflow-y-auto">
+          <div className="w-72 bg-white border-r border-gray-200 p-5 min-h-[calc(100vh-80px)] overflow-y-auto">
             <div className="mb-4">
               <button
                 onClick={() => setSelectedOfficer(null)}
@@ -310,8 +269,7 @@ const CollectorDashboard = () => {
           </div>
 
           <div className="flex-1 overflow-hidden">
-
-        <div className="p-8 overflow-auto h-[calc(100vh-140px)] bg-white text-black">
+            <div className="p-8 overflow-auto h-[calc(100vh-80px)] bg-white text-black">
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-3 text-black">Gap Identification</h2>
             {heatmapLoading ? (

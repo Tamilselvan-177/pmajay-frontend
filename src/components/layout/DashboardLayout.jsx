@@ -3,7 +3,7 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import { officerNavigation, collectorNavigation, primeMinisterNavigation } from '../../config/navigation';
 
-const DashboardLayout = ({ children, userRole }) => {
+const DashboardLayout = ({ children, userRole, activeTab, onTabChange }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [userName, setUserName] = useState('');
   const [userLocation, setUserLocation] = useState('');
@@ -40,6 +40,8 @@ const DashboardLayout = ({ children, userRole }) => {
           navigation={getNavigation()}
           isOpen={sidebarOpen}
           userRole={userRole}
+          activeTab={activeTab}
+          onTabChange={onTabChange}
         />
         
         <main className="flex-1 overflow-auto bg-gray-50">
