@@ -7,6 +7,7 @@ import {
   FileText, CheckCircle, XCircle, Clock, FileCheck, Building2, Home,
   Award, Plus, ChevronRight, AlertCircle, ShieldCheck, MapPin, Filter, Search, X
 } from "lucide-react";
+import DashboardLayout from "../components/layout/DashboardLayout";
 
 const CollectorDashboard = () => {
   const [projects, setProjects] = useState([]);
@@ -231,126 +232,44 @@ const CollectorDashboard = () => {
   }
 
   return (
-    <div className="flex h-screen bg-white text-black">
-      {/* SIDEBAR */}
-      <div className="w-80 bg-white border-r border-gray-300 shadow-sm p-5 overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-5 flex items-center gap-2 text-black">
-          <Building2 className="text-black" />
-          Collector Panel
-        </h2>
-
-        <div className="space-y-2 mb-6">
-          <NavLink
-            to="/collector"
-            className={({ isActive }) =>
-              `w-full block p-3 rounded-lg font-semibold flex items-center gap-2 transition ${
-                isActive ? "bg-black text-white shadow-md" : "text-black hover:bg-gray-100"
-              }`
-            }
-            end
-          >
-            <FileText size={18} />
-            Project Requests
-          </NavLink>
-          <NavLink
-            to="/collector/verification"
-            className={({ isActive }) =>
-              `w-full block p-3 rounded-lg font-semibold flex items-center gap-2 transition ${
-                isActive ? "bg-black text-white shadow-md" : "text-black hover:bg-gray-100"
-              }`
-            }
-          >
-            <ShieldCheck size={18} />
-            Verification
-          </NavLink>
-          <NavLink
-            to="/collector/verification/map"
-            className={({ isActive }) =>
-              `w-full block p-3 rounded-lg font-semibold flex items-center gap-2 transition ${
-                isActive ? "bg-black text-white shadow-md" : "text-black hover:bg-gray-100"
-              }`
-            }
-          >
-            <MapPin size={18} />
-            District Map
-          </NavLink>
-        </div>
-
-        <div className="mb-4">
-          <button
-            onClick={() => setSelectedOfficer(null)}
-            className={`w-full p-3 rounded-lg mb-2 font-semibold ${
-              !selectedOfficer ? "bg-black text-white" : "bg-gray-100 text-black"
-            }`}
-          >
-            All Officers
-          </button>
-        </div>
-
-        <h3 className="font-semibold text-black mb-3">Villages & Officers</h3>
-        {officers.map((off) => (
-          <button
-            key={off._id}
-            onClick={() => setSelectedOfficer(off._id)}
-            className={`w-full flex items-center justify-between p-3 rounded-lg border mb-2 ${
-              selectedOfficer === off._id ? "bg-gray-100 border-black" : "hover:bg-gray-50 border-gray-300"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <Home className="text-black" />
-              <div>
-                <p className="font-bold text-black">{off.fullName}</p>
-                <p className="text-sm text-gray-700">{off.village?.name}</p>
-              </div>
+    <DashboardLayout userRole="collector">
+      <div className="min-h-full bg-gray-50">
+        <div className="flex">
+          <div className="w-72 bg-white border-r border-gray-200 p-5 min-h-[calc(100vh-80px)] overflow-y-auto">
+            <div className="mb-4">
+              <button
+                onClick={() => setSelectedOfficer(null)}
+                className={`w-full p-3 rounded-lg mb-2 font-semibold transition ${
+                  !selectedOfficer ? "bg-gov-green-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                All Officers
+              </button>
             </div>
-            <ChevronRight className="text-black" />
-          </button>
-        ))}
-      </div>
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 overflow-hidden">
-        {/* TOP NAV */}
-        <div className="bg-white shadow border-b border-gray-300 px-8 py-4">
-          <div className="flex items-center gap-4">
-            <NavLink
-              to="/collector"
-              className={({ isActive }) =>
-                `px-6 py-3 font-semibold rounded-lg transition flex items-center gap-2 ${
-                  isActive ? "bg-black text-white shadow-sm" : "text-black hover:bg-gray-100"
-                }`
-              }
-              end
-            >
-              <FileText size={18} />
-              Project Requests
-            </NavLink>
-            <NavLink
-              to="/collector/verification"
-              className={({ isActive }) =>
-                `px-6 py-3 font-semibold rounded-lg transition flex items-center gap-2 ${
-                  isActive ? "bg-black text-white shadow-sm" : "text-black hover:bg-gray-100"
-                }`
-              }
-            >
-              <ShieldCheck size={18} />
-              Verification
-            </NavLink>
-            <NavLink
-              to="/collector/verification/map"
-              className={({ isActive }) =>
-                `px-6 py-3 font-semibold rounded-lg transition flex items-center gap-2 ${
-                  isActive ? "bg-black text-white shadow-sm" : "text-black hover:bg-gray-100"
-                }`
-              }
-            >
-              <MapPin size={18} />
-              District Map
-            </NavLink>
+            <h3 className="font-semibold text-gray-800 mb-3 text-sm uppercase tracking-wide">Villages & Officers</h3>
+            {officers.map((off) => (
+              <button
+                key={off._id}
+                onClick={() => setSelectedOfficer(off._id)}
+                className={`w-full flex items-center justify-between p-3 rounded-lg border mb-2 transition ${
+                  selectedOfficer === off._id ? "bg-gov-green-50 border-gov-green-500" : "hover:bg-gray-50 border-gray-200"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Home className="text-gov-green-600" />
+                  <div className="text-left">
+                    <p className="font-bold text-gray-900">{off.fullName}</p>
+                    <p className="text-sm text-gray-600">{off.village?.name}</p>
+                  </div>
+                </div>
+                <ChevronRight className="text-gray-400" />
+              </button>
+            ))}
           </div>
-        </div>
 
-        <div className="p-8 overflow-auto h-[calc(100vh-140px)] bg-white text-black">
+          <div className="flex-1 overflow-hidden">
+            <div className="p-8 overflow-auto h-[calc(100vh-80px)] bg-white text-black">
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-3 text-black">Gap Identification</h2>
             {heatmapLoading ? (
@@ -904,9 +823,11 @@ const CollectorDashboard = () => {
               </div>
             </div>
           )}
+          </div>
+        </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

@@ -7,6 +7,7 @@ import {
   Camera, Eye, Shield, Award, Filter, Search, MapPin, TrendingDown, AlertTriangle,
   BarChart3, Zap, Droplets, School, Home, Users, Sun, Map
 } from "lucide-react";
+import DashboardLayout from "../components/layout/DashboardLayout";
 
 const OfficerDashboard = () => {
   const navigate = useNavigate();
@@ -1067,56 +1068,14 @@ const OfficerDashboard = () => {
     }
   };
 
-  // 🔥 ENHANCED TOP NAVIGATION WITH TABS (NEW)
   return (
-    <div className="min-h-screen bg-white text-black">
-      {/* 🔥 NEW TAB NAVIGATION + ORIGINAL NAVIGATION COMBINED */}
-      <div className="flex items-center gap-1 mb-6 border-b border-gray-300 pb-4 bg-white shadow-sm max-w-7xl mx-auto px-8 rounded-t-lg">
-        <button
-          onClick={() => setActiveTab("dashboard")}
-          className={`group relative px-6 py-3 font-semibold text-black hover:bg-gray-100 transition-all duration-200 flex items-center gap-2 rounded-lg ${
-            activeTab === "dashboard" ? "bg-black text-white shadow-lg" : ""
-          }`}
-        >
-          <BarChart3 className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          Dashboard
-        </button>
-
-        <button
-          onClick={() => setActiveTab("projects")}
-          className={`group relative px-6 py-3 font-semibold text-black hover:bg-gray-100 transition-all duration-200 flex items-center gap-2 rounded-lg ${
-            activeTab === "projects" ? "bg-black text-white shadow-lg" : ""
-          }`}
-        >
-          <FolderOpen className="w-5 h-5" />
-          Projects
-        </button>
-
-        <button
-          onClick={() => setActiveTab("heatmap")}
-          className={`group relative px-6 py-3 font-semibold text-black hover:bg-gray-100 transition-all duration-200 flex items-center gap-2 rounded-lg ${
-            activeTab === "heatmap" ? "bg-black text-white shadow-lg" : ""
-          }`}
-        >
-          <Map className="w-5 h-5" />
-          Heatmap
-        </button>
-
-        {/* 🔥 ORIGINAL NAVIGATION BUTTONS (PRESERVED) */}
-     <button 
-    onClick={() => navigate('/officer/verification/map')}
-    className="group relative px-6 py-3 font-semibold text-black hover:bg-gray-100 transition-all duration-200 flex items-center gap-2 rounded-lg ml-auto"
-  >
-    <MapPin className="w-5 h-5" />
-    District Map
-  </button>
-</div>
-     {/* <><><>>>><>>>><><><><</></></> */}
-
-      <div className="max-w-7xl mx-auto px-8 py-8">
-        {renderTabContent()}
+    <DashboardLayout userRole="officer" activeTab={activeTab} onTabChange={setActiveTab}>
+      <div className="min-h-full bg-gray-50">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          {renderTabContent()}
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 
